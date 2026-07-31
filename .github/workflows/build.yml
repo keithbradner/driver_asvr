@@ -1,0 +1,24 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows:
+    name: Windows (driver + monitor + Config + package)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # package.ps1 locates MSBuild via vswhere and CMake from PATH,
+      # builds everything, and assembles dist\driver_asvr.zip
+      - name: Build and package
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File tools\package.ps1
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver_asvr
+          path: dist/driver_asvr.zip
+          if-no-files-found: error

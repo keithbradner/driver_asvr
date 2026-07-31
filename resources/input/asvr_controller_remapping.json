@@ -1,0 +1,62 @@
+{
+  "to_controller_type": "asvr_controller",
+  "layouts": [
+    {
+      "priority": 95,
+      "from_controller_type": "oculus_touch",
+      "simulate_controller_type": true,
+      "simulate_render_model": true,
+      "simulate_HMD": true,
+      "autoremappings": [
+        {
+          "from": "/user/hand/right/input/trigger",
+          "to": "/user/hand/right/input/trigger"
+        },
+        {
+          "from": "/user/hand/left/input/trigger",
+          "to": "/user/hand/left/input/trigger"
+        },
+        {
+          "from": "/user/hand/right/input/grip",
+          "to": "/user/hand/right/input/grip"
+        },
+        {
+          "from": "/user/hand/left/input/grip",
+          "to": "/user/hand/left/input/grip"
+        },
+        {
+          "from": "/user/hand/right/input/joystick",
+          "to": "/user/hand/right/input/joystick"
+        },
+        {
+          "from": "/user/hand/left/input/joystick",
+          "to": "/user/hand/left/input/joystick"
+        },
+        {
+          "from": "/user/hand/right/input/a",
+          "to": "/user/hand/right/input/a"
+        },
+        {
+          "from": "/user/hand/right/input/b",
+          "to": "/user/hand/right/input/b"
+        },
+        {
+          "from": "/user/hand/left/input/x",
+          "to": "/user/hand/left/input/x"
+        },
+        {
+          "from": "/user/hand/left/input/y",
+          "to": "/user/hand/left/input/y"
+        },
+        {
+          "from": "/user/hand/right/input/system",
+          "to": "/user/hand/right/input/system"
+        },
+        {
+          "from": "/user/hand/left/input/system",
+          "to": "/user/hand/left/input/system"
+        }
+      ]
+    }
+  ]
+}

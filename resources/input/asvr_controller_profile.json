@@ -1,0 +1,57 @@
+{
+  "jsonid": "input_profile",
+  "controller_type": "asvr_controller",
+  "device_class": "TrackedDeviceClass_Controller",
+  "driver_name": "driver_asvr",
+  "legacy_binding": "{asvr}/input/asvr_legacy_bindings.json",
+  "remapping": "{asvr}/input/asvr_controller_remapping.json",
+  "input_bindingui_mode": "controller_handed",
+  "input_source": {
+    "/input/trigger": {
+      "type": "trigger",
+      "click": true,
+      "value": true,
+      "order": 1
+    },
+    "/input/grip": {
+      "type": "button",
+      "click": true,
+      "order": 2
+    },
+    "/input/joystick": {
+      "type": "joystick",
+      "order": 3
+    },
+    "/input/a": {
+      "type": "button",
+      "click": true,
+      "order": 4
+    },
+    "/input/b": {
+      "type": "button",
+      "click": true,
+      "order": 5
+    },
+    "/input/x": {
+      "type": "button",
+      "click": true,
+      "order": 6
+    },
+    "/input/y": {
+      "type": "button",
+      "click": true,
+      "order": 7
+    },
+    "/input/system": {
+      "type": "button",
+      "click": true,
+      "order": 8
+    },
+    "/pose/raw": {
+      "type": "pose"
+    },
+    "/pose/tip": {
+      "type": "pose"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Build outputs
+/bin/win32/
+/bin/win64/
+/driver_asvr/bin/
+/build/
+/dist/
+**/objs/
+*.vcxproj.user
+*.aps
+
+# Local diagnostics
+SteamVR-*.txt
+
+# Vendor: only the pieces the build and packaging need are tracked
+/vendor/*
+!/vendor/openvr
+/vendor/openvr/*
+!/vendor/openvr/headers
+!/vendor/openvr/docs
+!/vendor/openvr/lib
+/vendor/openvr/lib/*
+!/vendor/openvr/lib/win64
+!/vendor/openvr/bin
+/vendor/openvr/bin/*
+!/vendor/openvr/bin/win64
+/vendor/openvr/bin/win64/*.pdb
+!/vendor/openvr/LICENSE
+!/vendor/glm
+/vendor/glm/*
+!/vendor/glm/glm
+!/vendor/glm/copying.txt
+!/vendor/imgui
+!/vendor/glfw
+/vendor/glfw/*
+!/vendor/glfw/CMake
+!/vendor/glfw/include
+!/vendor/glfw/src
+!/vendor/glfw/CMakeLists.txt
+!/vendor/glfw/LICENSE.md
+!/vendor/json
+/vendor/json/*
+!/vendor/json/single_include
+!/vendor/json/LICENSE.MIT
