@@ -8,6 +8,8 @@ works on fully headless machines and over Remote Desktop - the driver implements
 SteamVR's `IVRVirtualDisplay` path, so the compositor never needs a real display
 or hardware vsync.
 
+![ASVR desktop window showing a live view of the VR scene](screenshot.png)
+
 ## Quickstart
 
 1. Download `driver_asvr.zip` from the Releases page, or build it yourself
