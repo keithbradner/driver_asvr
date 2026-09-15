@@ -92,6 +92,7 @@ private:
     void SendControllerSystem(bool f_state);
     void SendControllerButton(const char *f_button, bool f_state);
     void SendControllerJoystick(float f_x, float f_y);
+    void ResetControllerOffsets();
     void ReleaseHeldActions();
     void FindControllerDevice();
     void LoadKeyBindings();

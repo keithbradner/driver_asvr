@@ -300,6 +300,13 @@ void CConfigApp::DrawDriverSettingsSection()
     ImGui::BeginDisabled(l_poseZero);
     if(ImGui::Button("Reset Saved Pose")) m_uiPoseResetPending = true;
     ImGui::EndDisabled();
+    if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+    {
+        ImGui::SetTooltip("Clears the headset pose the driver saves when SteamVR shuts down,\n"
+            "so the next launch starts at the origin looking straight ahead.\n"
+            "Greyed out while no pose is saved. To reset while SteamVR is\n"
+            "running, press %s in the ASVR window.", GetKeyName(m_uiKeyBindings[KB_ResetHeadPose]));
+    }
     if(m_uiPoseResetPending)
     {
         ImGui::SameLine();
@@ -331,11 +338,22 @@ void CConfigApp::DrawDriverSettingsSection()
 
 void CConfigApp::DrawKeyBindingsRows()
 {
-    // Two combos per row; saved together with the rest of the driver settings
+    // Two combos per row; saved together with the rest of the driver settings.
+    // The second column starts past the widest first-column label so a long
+    // label can never run underneath the neighbouring combo
+    const float l_comboWidth = 110.f;
+    const float l_spacing = ImGui::GetStyle().ItemSpacing.x;
+    float l_secondColumn = 280.f;
+    for(int i = 0; i < KB_Count; i += 2)
+    {
+        const float l_needed = l_comboWidth + l_spacing + ImGui::CalcTextSize(g_keyBindingDefs[i].m_label).x + l_spacing*2.f;
+        if(l_needed > l_secondColumn) l_secondColumn = l_needed;
+    }
+
     for(int i = 0; i < KB_Count; i++)
     {
-        if(i % 2 == 1) ImGui::SameLine(280.f);
-        ImGui::SetNextItemWidth(110.f);
+        if(i % 2 == 1) ImGui::SameLine(l_secondColumn);
+        ImGui::SetNextItemWidth(l_comboWidth);
         ImGui::PushID(i);
         if(ImGui::BeginCombo("##key", GetKeyName(m_uiKeyBindings[i])))
         {

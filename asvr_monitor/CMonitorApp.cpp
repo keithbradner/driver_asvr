@@ -21,6 +21,10 @@ const float g_ctrlMoveSpeed = 0.5f; // meters per second, controller offset
 const float g_keyRotateSpeed = glm::pi<float>() / 4.f; // radians per second (numpad)
 const float g_pitchLimit = glm::radians(89.f);
 
+// Head-local controller offsets at startup and after a reset, [0] = right,
+// [1] = left. Must match the driver's CControllerDevice constructor defaults
+const glm::vec3 g_ctrlDefaultOffset[2U] = { glm::vec3(0.15f, -0.15f, -0.35f), glm::vec3(-0.15f, -0.15f, -0.35f) };
+
 static void LogLine(const char *f_text)
 {
     char l_path[MAX_PATH];
@@ -134,12 +138,11 @@ CMonitorApp::CMonitorApp()
     m_pitch = 0.f;
     m_roll = 0.f;
 
-    // Must match the driver's CControllerDevice constructor defaults
-    m_ctrlOffsetPos[0U] = glm::vec3(0.15f, -0.15f, -0.35f);
-    m_ctrlOffsetPos[1U] = glm::vec3(-0.15f, -0.15f, -0.35f);
-    m_ctrlOffsetRot[0U] = g_zeroRotation;
-    m_ctrlOffsetRot[1U] = g_zeroRotation;
-
+    for(size_t i = 0U; i < 2U; i++)
+    {
+        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
+        m_ctrlOffsetRot[i] = g_zeroRotation;
+    }
 }
 CMonitorApp::~CMonitorApp()
 {
@@ -395,6 +398,8 @@ void CMonitorApp::ReleaseMouse()
         ReleaseHeldActions();
         m_actionHeld[KB_SwitchController] = false;
         m_actionHeld[KB_MouseAim] = false;
+        m_actionHeld[KB_ResetHeadPose] = false;
+        m_actionHeld[KB_ResetControllers] = false;
         UpdateTitle();
     }
 }
@@ -833,6 +838,18 @@ void CMonitorApp::SendControllerJoystick(float f_x, float f_y)
     }
 }
 
+// Both controllers back to where they start: default offsets, no aim rotation
+void CMonitorApp::ResetControllerOffsets()
+{
+    for(size_t i = 0U; i < 2U; i++)
+    {
+        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
+        m_ctrlOffsetRot[i] = g_zeroRotation;
+    }
+    SendControllerOffset(false);
+    SendControllerOffset(true);
+}
+
 // Send release for every held button-type action on the active controller
 // (mouse release, focus loss, or switching the active controller). Deliberately
 // leaves KB_SwitchController's edge state alone - clearing it would retrigger
@@ -951,6 +968,10 @@ void CMonitorApp::ProcessInput(float f_delta)
         m_mouseAimController = !m_mouseAimController;
         UpdateTitle();
     }
+    // One-shot resets on key press: the head reset is applied below, before this
+    // frame's movement, so held movement keys keep working through it
+    const bool l_resetHead = (l_edge(KB_ResetHeadPose) > 0);
+    if(l_edge(KB_ResetControllers) > 0) ResetControllerOffsets();
     if((l_change = l_edge(KB_Trigger)) != 0) SendControllerTrigger(l_change > 0);
     if((l_change = l_edge(KB_Grip)) != 0) SendControllerButton("grip", l_change > 0);
     if((l_change = l_edge(KB_SystemButton)) != 0) SendControllerSystem(l_change > 0);
@@ -1022,6 +1043,16 @@ void CMonitorApp::ProcessInput(float f_delta)
 
     // Move the head, FPS-style
     bool l_changed = false;
+    if(l_resetHead)
+    {
+        // Back to the origin, facing -Z with no pitch or roll (the only way to
+        // get rid of roll picked up from a fumbled numpad press)
+        m_position = g_zeroPoint3;
+        m_yaw = 0.f;
+        m_pitch = 0.f;
+        m_roll = 0.f;
+        l_changed = true;
+    }
     if(l_hasRotation)
     {
         m_yaw += (l_yawDelta + l_keyYaw);

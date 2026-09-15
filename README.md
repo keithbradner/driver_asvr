@@ -34,6 +34,8 @@ the defaults:
 | `W A S D` | move the head |
 | `PgUp` / `PgDn` | move up / down |
 | Numpad `4/6` `8/2` `1/3` | head yaw / pitch / roll |
+| `Home` | reset the head: back to the origin, looking straight ahead, no roll |
+| `End` | reset both controllers to their default offsets |
 | `Tab` | switch the active controller (right ⇄ left) |
 | `Backspace` | toggle the mouse between head look and aiming the controller |
 | Left click | trigger |
@@ -46,7 +48,8 @@ the defaults:
 
 The controllers follow your head at an offset, like wands held out in front of
 you. The headset pose is saved when SteamVR shuts down and restored next
-launch. "Reset Saved Pose" in `Config.exe` puts you back at the origin.
+launch; `Home` resets it while SteamVR is running, and "Reset Saved Pose" in
+`Config.exe` clears the saved one so the next launch starts at the origin.
 
 ## Programmatic control (asvr_ctl)
 

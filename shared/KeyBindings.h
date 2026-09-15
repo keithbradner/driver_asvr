@@ -21,6 +21,7 @@ enum EKeyBinding : int
     KB_PitchDown,
     KB_RollLeft,
     KB_RollRight,
+    KB_ResetHeadPose, // one-shot: head back to the origin, looking straight ahead
     KB_SystemButton,
     // Controller actions target the ACTIVE controller (right by default);
     // KB_SwitchController toggles between right and left
@@ -34,6 +35,7 @@ enum EKeyBinding : int
     KB_ControllerBackward,
     KB_ControllerLeft,
     KB_ControllerRight,
+    KB_ResetControllers, // one-shot: both controllers back to their default offsets
     KB_JoystickUp,
     KB_JoystickDown,
     KB_JoystickLeft,
@@ -63,17 +65,19 @@ constexpr KeyBindingDef g_keyBindingDefs[KB_Count]
     { "keyPitchDown", "Pitch down", 0x62 /* Numpad 2 */ },
     { "keyRollLeft", "Roll left", 0x61 /* Numpad 1 */ },
     { "keyRollRight", "Roll right", 0x63 /* Numpad 3 */ },
+    { "keyResetHeadPose", "Reset head pose", 0x24 /* Home */ },
     { "keySystemButton", "System button", 0x20 /* Space */ },
     { "keyTrigger", "Trigger", 0x01 /* Left Mouse */ },
     { "keyGrip", "Grip", 0x02 /* Right Mouse */ },
     { "keySwitchController", "Switch controller", 0x09 /* Tab */ },
-    { "keyMouseAim", "Mouse aims controller (toggle)", 0x08 /* Backspace */ },
+    { "keyMouseAim", "Toggle mouse aim", 0x08 /* Backspace */ },
     { "keyButtonA", "A button (X on left)", 0x4E /* N */ },
     { "keyButtonB", "B button (Y on left)", 0x4D /* M */ },
     { "keyControllerForward", "Controller forward", 0x49 /* I */ },
     { "keyControllerBackward", "Controller backward", 0x4B /* K */ },
     { "keyControllerLeft", "Controller left", 0x4A /* J */ },
     { "keyControllerRight", "Controller right", 0x4C /* L */ },
+    { "keyResetControllers", "Reset controllers", 0x23 /* End */ },
     { "keyJoystickUp", "Joystick up", 0x26 /* Up Arrow */ },
     { "keyJoystickDown", "Joystick down", 0x28 /* Down Arrow */ },
     { "keyJoystickLeft", "Joystick left", 0x25 /* Left Arrow */ },
