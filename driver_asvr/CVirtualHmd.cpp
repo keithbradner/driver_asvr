@@ -70,7 +70,9 @@ vr::EVRInitError CVirtualHmd::Activate(uint32_t unObjectId)
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_SerialNumber_String, m_serial.c_str());
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_ModelNumber_String, m_serial.c_str());
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_RenderModelName_String, m_serial.c_str());
-    vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserIpdMeters_Float, 0.f);
+    // Average adult IPD (~63 mm) so apps see a normal stereo separation instead
+    // of two identical eyes
+    vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserIpdMeters_Float, 0.063f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserHeadToEyeDepthMeters_Float, 0.f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_DisplayFrequency_Float, m_fps);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_SecondsFromVsyncToPhotons_Float, 1.f / m_fps);
@@ -184,7 +186,7 @@ void CVirtualHmd::GetRecommendedRenderTargetSize(uint32_t *pnWidth, uint32_t *pn
 void CVirtualHmd::GetEyeOutputViewport(vr::EVREye eEye, uint32_t *pnX, uint32_t *pnY, uint32_t *pnWidth, uint32_t *pnHeight)
 {
     // Half of the window per eye; zero-sized viewports break vrcompositor (red screen).
-    // Both eyes render the same image due to zero IPD.
+    // The monitor and asvr_ctl screenshots show the left eye only.
     const uint32_t l_halfWidth = m_resolution.x / 2U;
     *pnX = (eEye == vr::Eye_Left) ? 0U : l_halfWidth;
     *pnY = 0U;
