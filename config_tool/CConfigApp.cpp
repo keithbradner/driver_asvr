@@ -363,8 +363,15 @@ void CConfigApp::DrawFrame()
     const ImGuiViewport *l_viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(l_viewport->WorkPos);
     ImGui::SetNextWindowSize(l_viewport->WorkSize);
-    ImGui::Begin("##main", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    // The outer window never scrolls; the content child below does
+    ImGui::Begin("##main", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
+        | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
+    // Footer = Separator() (advances by ItemSpacing.y only) + one text line; the
+    // child's own trailing ItemSpacing.y is the second spacing. Always reserved
+    // so the content doesn't shift when a message appears.
+    const float l_footerHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+    ImGui::BeginChild("##content", ImVec2(0.f, -l_footerHeight));
     DrawStatusSection();
     ImGui::Spacing();
     DrawDriverSwitchSection();
@@ -374,16 +381,13 @@ void CConfigApp::DrawFrame()
     DrawVRSettingsSection();
     ImGui::Spacing();
     DrawDriverSettingsSection();
+    ImGui::EndChild();
 
-    // Status line: pinned to the bottom while everything fits, inline once the
-    // content scrolls (pinning would land mid-content in scroll space)
+    // Status line: fixed at the bottom of the window regardless of window height
+    // or content scrolling
+    ImGui::Separator();
     const std::string &l_message = m_core->GetLastMessage();
-    if(!l_message.empty())
-    {
-        if(ImGui::GetScrollMaxY() == 0.f) ImGui::SetCursorPosY(ImGui::GetWindowHeight() - ImGui::GetFrameHeightWithSpacing());
-        ImGui::Separator();
-        ImGui::TextColored(m_core->IsLastMessageError() ? g_colorBad : g_colorGood, "%s", l_message.c_str());
-    }
+    ImGui::TextColored(m_core->IsLastMessageError() ? g_colorBad : g_colorGood, "%s", l_message.c_str());
 
     ImGui::End();
 }
