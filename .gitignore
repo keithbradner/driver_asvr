@@ -2,6 +2,7 @@
 /bin/win32/
 /bin/win64/
 /driver_asvr/bin/
+/asvr_monitor/bin/
 /build/
 /dist/
 **/objs/
