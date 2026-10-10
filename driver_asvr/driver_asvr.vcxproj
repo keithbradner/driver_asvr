@@ -96,6 +96,7 @@
     <ClCompile Include="CControllerDevice.cpp" />
     <ClCompile Include="CDisplayRedirect.cpp" />
     <ClCompile Include="CServerDriver.cpp" />
+    <ClCompile Include="CTrackerDevice.cpp" />
     <ClCompile Include="CVirtualHmd.cpp" />
     <ClCompile Include="DriverSettings.cpp" />
     <ClCompile Include="dllmain.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="CControllerDevice.h" />
     <ClInclude Include="CDisplayRedirect.h" />
     <ClInclude Include="CServerDriver.h" />
+    <ClInclude Include="CTrackerDevice.h" />
     <ClInclude Include="CVirtualHmd.h" />
     <ClInclude Include="DriverSettings.h" />
     <ClInclude Include="stdafx.h" />

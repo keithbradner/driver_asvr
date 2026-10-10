@@ -11,6 +11,7 @@
       "rotationY" : 0.0,
       "rotationZ" : 0.0,
       "rotationW" : 1.0,
+      "trackers" : "waist,left_foot,right_foot",
       "keyMoveForward" : 87,
       "keyMoveBackward" : 83,
       "keyMoveLeft" : 65,

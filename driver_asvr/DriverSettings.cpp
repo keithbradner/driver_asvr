@@ -19,12 +19,36 @@ static float ReadFloat(vr::IVRSettings *f_settings, const char *f_key, float f_d
     return (l_error == vr::VRSettingsError_None) ? l_value : f_default;
 }
 
+// Comma-separated role names, trimmed and lower-cased; key absent -> the default
+// list, "" or "none" -> no trackers
+static void ReadTrackers(vr::IVRSettings *f_settings, std::vector<std::string> &f_trackers)
+{
+    char l_buffer[256] = { 0 };
+    vr::EVRSettingsError l_error = vr::VRSettingsError_None;
+    f_settings->GetString(g_settingsSection, "trackers", l_buffer, sizeof(l_buffer), &l_error);
+    if(l_error != vr::VRSettingsError_None) return;
+
+    f_trackers.clear();
+    std::stringstream l_list(l_buffer);
+    std::string l_item;
+    while(std::getline(l_list, l_item, ','))
+    {
+        const size_t l_begin = l_item.find_first_not_of(" \t");
+        if(l_begin == std::string::npos) continue;
+        l_item = l_item.substr(l_begin, l_item.find_last_not_of(" \t") - l_begin + 1U);
+        for(char &l_char : l_item) l_char = static_cast<char>(tolower(static_cast<unsigned char>(l_char)));
+        if(l_item.compare("none") != 0) f_trackers.push_back(l_item);
+    }
+}
+
 DriverSettings LoadDriverSettings()
 {
     DriverSettings l_result;
 
     vr::IVRSettings *l_settings = vr::VRSettings();
     if(!l_settings) return l_result;
+
+    ReadTrackers(l_settings, l_result.trackers);
 
     const int32_t l_width = ReadInt(l_settings, "resolutionWidth", static_cast<int32_t>(l_result.resolution.x));
     const int32_t l_height = ReadInt(l_settings, "resolutionHeight", static_cast<int32_t>(l_result.resolution.y));

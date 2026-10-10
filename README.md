@@ -75,6 +75,34 @@ Units are meters and degrees. Positive yaw turns right, positive pitch looks
 up. `asvr_ctl --help` documents the full vocabulary. Exit codes: 0 ok, 1 the
 driver rejected the command, 2 transport failure (SteamVR not running etc.).
 
+## Virtual trackers
+
+The driver also creates Vive-style trackers (`TrackedDeviceClass_GenericTracker`, controller type
+`vive_tracker`), one per role in the `trackers` setting (default `waist,left_foot,right_foot`; the
+roles are waist, chest, left_foot, right_foot, left_knee, right_knee, left_elbow, right_elbow,
+left_shoulder, right_shoulder and handheld; `none` for no trackers). On first activation each one
+writes its SteamVR role into the `trackers` section of `steamvr.vrsettings` (`/devices/asvr/
+asvr_tracker_<role>`), the same key SteamVR's own tracker-role UI writes, so a role you reassign there
+sticks. SteamVR's OpenXR runtime then exposes them as `/user/vive_tracker_htcx/role/<role>`.
+
+Trackers follow the head at an offset like the controllers (hips 0.75 m below the eye, feet 1.6 m
+below and 0.12 m apart) until a command moves them:
+
+```
+asvr_ctl tracker list                                     the trackers that exist
+asvr_ctl tracker waist offset 0 -0.75 0 0 0 0 1           head-relative pose
+asvr_ctl tracker left_foot pose -0.12 0.05 0 0 0 0 1      absolute pose
+asvr_ctl tracker right_foot tracking off                   report it as lost (and on again)
+```
+
+The monitor window has no keys for them; `status` lists their poses.
+
+Two SteamVR behaviours to know when driving apps this way: a tracker's role is read by SteamVR when
+the device activates, and the driver writes it then, so new trackers get their roles at the *next*
+SteamVR start; and SteamVR's OpenXR runtime often leaves a scene application's session VISIBLE but
+never FOCUSED (no input reaches it) until something makes it re-evaluate focus - showing and hiding
+the dashboard does (`vrcmd --showdashboard`, `vrcmd --hidedashboard`, or the system button twice).
+
 ## Configuration
 
 Settings use the standard SteamVR mechanism: defaults ship in
@@ -90,6 +118,7 @@ hand:
 * `fps` - virtual display refresh rate (default 60)
 * `keyMoveForward`, `keyTrigger`, ... - the monitor key bindings, stored as
   Windows virtual-key codes
+* `trackers` - the virtual trackers to create, by role (see Virtual trackers)
 * `positionX/Y/Z`, `rotationX/Y/Z/W` - the saved pose, written by the driver
   on shutdown
 

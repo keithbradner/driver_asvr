@@ -6,6 +6,7 @@
 
 class CVirtualHmd;
 class CControllerDevice;
+class CTrackerDevice;
 class CDisplayRedirect;
 class CControlServer;
 
@@ -32,12 +33,14 @@ private:
     std::string ExecuteControlCommand(const std::string &f_line);
     std::string ExecuteHmdCommand(const std::string &f_type, std::stringstream &f_args);
     std::string ExecuteControllerCommand(std::stringstream &f_args);
+    std::string ExecuteTrackerCommand(std::stringstream &f_args);
     void ProcessScheduledReleases();
 
     DriverSettings m_settings;
     std::unique_ptr<CVirtualHmd> m_hmd;
     std::unique_ptr<CControllerDevice> m_controllerRight;
     std::unique_ptr<CControllerDevice> m_controllerLeft;
+    std::vector<std::unique_ptr<CTrackerDevice>> m_trackers; // one per role in the "trackers" setting
     std::unique_ptr<CDisplayRedirect> m_displayRedirect;
     std::unique_ptr<CControlServer> m_controlServer;
 

@@ -3,6 +3,7 @@
 #include "CServerDriver.h"
 #include "CVirtualHmd.h"
 #include "CControllerDevice.h"
+#include "CTrackerDevice.h"
 #include "CDisplayRedirect.h"
 #include "CControlServer.h"
 #include "../shared/ControlProtocol.h"
@@ -42,6 +43,20 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 
     m_controllerLeft.reset(new CControllerDevice(true));
     vr::VRServerDriverHost()->TrackedDeviceAdded(m_controllerLeft->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerLeft.get());
+
+    for(const std::string &l_role : m_settings.trackers)
+    {
+        if(!CTrackerDevice::IsKnownRole(l_role))
+        {
+            vr::VRDriverLog()->Log(("CServerDriver: unknown tracker role in the trackers setting: " + l_role).c_str());
+            continue;
+        }
+        bool l_duplicate = false;
+        for(const auto &l_tracker : m_trackers) l_duplicate |= !l_tracker->GetRole().compare(l_role);
+        if(l_duplicate) continue;
+        m_trackers.emplace_back(new CTrackerDevice(l_role));
+        vr::VRServerDriverHost()->TrackedDeviceAdded(m_trackers.back()->GetSerial().c_str(), vr::TrackedDeviceClass_GenericTracker, m_trackers.back().get());
+    }
 
     if(m_primaryInstance)
     {
@@ -94,6 +109,7 @@ void CServerDriver::Cleanup()
         if(!SaveDriverPose(l_hmdPos, l_hmdRot)) vr::VRDriverLog()->Log("CServerDriver: failed to persist the pose to vrsettings");
     }
 
+    m_trackers.clear();
     m_controllerRight.reset();
     m_controllerLeft.reset();
     m_displayRedirect.reset();
@@ -147,6 +163,11 @@ void CServerDriver::RunFrame()
     m_controllerRight->RunFrame();
     m_controllerLeft->UpdateWorldTransform(l_headPos, l_headRot);
     m_controllerLeft->RunFrame();
+    for(auto &l_tracker : m_trackers)
+    {
+        l_tracker->UpdateWorldTransform(l_headPos, l_headRot);
+        l_tracker->RunFrame();
+    }
 
     // Pose changes from control commands are published on the next RunFrame,
     // one frame (~16ms) after the reply - acceptable for scripted control
@@ -198,11 +219,62 @@ std::string CServerDriver::ExecuteControlCommand(const std::string &f_line)
         l_response << " right ";
         m_controllerRight->GetOffset(l_pos, l_rot);
         AppendPose(l_response, l_pos, l_rot);
+        l_response << " trackers " << m_trackers.size();
+        for(const auto &l_tracker : m_trackers)
+        {
+            l_response << ' ';
+            l_tracker->Describe(l_response);
+        }
         l_reply = l_response.str();
     }
     else if(!l_type.compare(0U, 4U, "hmd_")) l_reply = ExecuteHmdCommand(l_type, l_message);
     else if(!l_type.compare("ctrl")) l_reply = ExecuteControllerCommand(l_message);
+    else if(!l_type.compare("tracker")) l_reply = ExecuteTrackerCommand(l_message);
     return l_reply;
+}
+
+std::string CServerDriver::ExecuteTrackerCommand(std::stringstream &f_args)
+{
+    std::string l_role;
+    f_args >> l_role;
+    if(!l_role.compare("list"))
+    {
+        std::stringstream l_response;
+        l_response << "ok";
+        for(const auto &l_tracker : m_trackers) l_response << ' ' << l_tracker->GetRole();
+        return l_response.str();
+    }
+
+    CTrackerDevice *l_tracker = nullptr;
+    for(auto &l_candidate : m_trackers)
+    {
+        if(!l_candidate->GetRole().compare(l_role)) l_tracker = l_candidate.get();
+    }
+    if(!l_tracker) return "err unknown tracker (see tracker list; roles come from the trackers setting)";
+
+    std::string l_action;
+    f_args >> l_action;
+    const bool l_offset = !l_action.compare("offset");
+    if(l_offset || !l_action.compare("pose"))
+    {
+        glm::vec3 l_pos(0.f);
+        glm::quat l_rot(1.f, 0.f, 0.f, 0.f);
+        for(int i = 0; i < 3; i++) f_args >> l_pos[i];
+        for(int i = 0; i < 4; i++) f_args >> l_rot[i];
+        if(f_args.fail()) return "err bad args";
+        if(!(l_offset ? l_tracker->SetOffset(l_pos, l_rot) : l_tracker->SetAbsolute(l_pos, l_rot))) return "err bad quaternion";
+        return "ok";
+    }
+    if(!l_action.compare("tracking"))
+    {
+        std::string l_state;
+        f_args >> l_state;
+        if(!l_state.compare("on")) l_tracker->SetTracking(true);
+        else if(!l_state.compare("off")) l_tracker->SetTracking(false);
+        else return "err bad args";
+        return "ok";
+    }
+    return "err unknown command";
 }
 
 std::string CServerDriver::ExecuteHmdCommand(const std::string &f_type, std::stringstream &f_args)
