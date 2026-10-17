@@ -46,3 +46,32 @@ jobs:
           name: driver_asvr_linux
           path: dist/driver_asvr_linux.tar.gz
           if-no-files-found: error
+
+  # Pushing a v* tag publishes a GitHub release with both packages attached.
+  # A release drafted by hand for the tag beforehand keeps its notes; only the
+  # assets are (re)uploaded
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/driver_asvr.zip dist/driver_asvr_linux.tar.gz --clobber
+          else
+            gh release create "$TAG" dist/driver_asvr.zip dist/driver_asvr_linux.tar.gz \
+              --title "ASVR $TAG" --generate-notes --verify-tag
+          fi

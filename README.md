@@ -148,6 +148,14 @@ repo's `bin/linux64` and a `resources` symlink to `resources/`, then
 `.../SteamVR/bin/vrpathreg.sh adddriver <that folder>`. Restart SteamVR after
 each rebuild.
 
+### Releases
+
+CI builds and packages both platforms on every push. Pushing a `v*` tag
+(`git tag v1.2.0 && git push origin v1.2.0`) also publishes a GitHub release
+with `driver_asvr.zip` and `driver_asvr_linux.tar.gz` attached. To write the
+release notes yourself, draft the release for that tag first; CI then only
+uploads the packages to it.
+
 ## Headless / Remote Desktop notes
 
 * An RDP session counts as a *locked workstation*, and SteamVR silently refuses
