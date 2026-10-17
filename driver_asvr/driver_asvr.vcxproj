@@ -93,11 +93,13 @@
   <ItemGroup>
     <ClCompile Include="CCompositorProvider.cpp" />
     <ClCompile Include="CControlServer.cpp" />
+    <ClCompile Include="CControlServer_win.cpp" />
     <ClCompile Include="CControllerDevice.cpp" />
     <ClCompile Include="CDisplayRedirect.cpp" />
     <ClCompile Include="CServerDriver.cpp" />
     <ClCompile Include="CVirtualHmd.cpp" />
     <ClCompile Include="DriverSettings.cpp" />
+    <ClCompile Include="Platform.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -113,6 +115,7 @@
     <ClInclude Include="CServerDriver.h" />
     <ClInclude Include="CVirtualHmd.h" />
     <ClInclude Include="DriverSettings.h" />
+    <ClInclude Include="Platform.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -57,7 +57,7 @@ vr::EVRInitError CControllerDevice::Activate(uint32_t unObjectId)
 
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_SerialNumber_String, m_serial.c_str());
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_ModelNumber_String, m_serial.c_str());
-    vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_RenderModelName_String, m_leftHand ? "oculus_cv1_controller_left" : "oculus_cv1_controller_right");
+    vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_RenderModelName_String, m_leftHand ? "oculus_quest_plus_controller_left" : "oculus_quest_plus_controller_right");
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_InputProfilePath_String, "{asvr}/input/asvr_controller_profile.json");
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_ControllerType_String, "asvr_controller");
     vr::VRProperties()->SetInt32Property(m_propertyContainer, vr::Prop_ControllerRoleHint_Int32, m_leftHand ? vr::TrackedControllerRole_LeftHand : vr::TrackedControllerRole_RightHand);

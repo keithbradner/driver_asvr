@@ -1,14 +1,23 @@
 #pragma once
 
+#ifndef _WIN32
+class CDirectModeOutput;
+#endif
+
 // The virtual headset: a tracked HMD device plus the IVRDisplayComponent that
 // describes the (non-existent) panel geometry to the compositor. Frames never
-// go through a real display; CDisplayRedirect receives them instead.
+// go through a real display; CDisplayRedirect (Windows) or the direct-mode
+// component (Linux) receives them instead.
 class CVirtualHmd final : public vr::ITrackedDeviceServerDriver, public vr::IVRDisplayComponent
 {
 public:
     CVirtualHmd(const glm::uvec2 &f_resolution, float f_fps);
 
     const std::string& GetSerial() const;
+
+#ifndef _WIN32
+    void SetDirectModeOutput(CDirectModeOutput *f_output);
+#endif
 
     void SetPoseTransform(const glm::vec3 &f_pos, const glm::quat &f_rot);
     void GetPoseTransform(glm::vec3 &f_pos, glm::quat &f_rot) const;
@@ -37,6 +46,9 @@ private:
     std::string m_serial = "asvr_hmd_0001";
     glm::uvec2 m_resolution;
     float m_fps;
+#ifndef _WIN32
+    CDirectModeOutput *m_directModeOutput = nullptr;
+#endif
 
     vr::TrackedDeviceIndex_t m_trackedDevice = vr::k_unTrackedDeviceIndexInvalid;
     vr::PropertyContainerHandle_t m_propertyContainer = vr::k_ulInvalidPropertyContainer;

@@ -22,3 +22,27 @@ jobs:
           name: driver_asvr
           path: dist/driver_asvr.zip
           if-no-files-found: error
+
+  linux:
+    name: Linux (driver + monitor + ctl + Config + package)
+    runs-on: ubuntu-latest
+    # glibc 2.35 baseline, matching the documented distrobox dev environment
+    container: ubuntu:22.04
+    steps:
+      - name: Install toolchain
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential cmake xorg-dev libgl1-mesa-dev git
+
+      - uses: actions/checkout@v4
+
+      - name: Build and package
+        run: bash tools/package.sh
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver_asvr_linux
+          path: dist/driver_asvr_linux.tar.gz
+          if-no-files-found: error

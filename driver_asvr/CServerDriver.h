@@ -6,7 +6,11 @@
 
 class CVirtualHmd;
 class CControllerDevice;
+#ifdef _WIN32
 class CDisplayRedirect;
+#else
+class CDirectModeOutput;
+#endif
 class CControlServer;
 
 class CServerDriver final : public vr::IServerTrackedDeviceProvider
@@ -38,7 +42,11 @@ private:
     std::unique_ptr<CVirtualHmd> m_hmd;
     std::unique_ptr<CControllerDevice> m_controllerRight;
     std::unique_ptr<CControllerDevice> m_controllerLeft;
+#ifdef _WIN32
     std::unique_ptr<CDisplayRedirect> m_displayRedirect;
+#else
+    std::unique_ptr<CDirectModeOutput> m_directModeOutput;
+#endif
     std::unique_ptr<CControlServer> m_controlServer;
 
     struct ScheduledRelease
@@ -49,6 +57,5 @@ private:
     };
     std::vector<ScheduledRelease> m_scheduledReleases;
 
-    HANDLE m_primaryGuard = NULL;
     bool m_primaryInstance = false;
 };

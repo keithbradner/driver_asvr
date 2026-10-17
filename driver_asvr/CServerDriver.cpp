@@ -3,11 +3,14 @@
 #include "CServerDriver.h"
 #include "CVirtualHmd.h"
 #include "CControllerDevice.h"
+#ifdef _WIN32
 #include "CDisplayRedirect.h"
+#else
+#include "linux/CDirectModeOutput.h"
+#endif
 #include "CControlServer.h"
+#include "Platform.h"
 #include "../shared/ControlProtocol.h"
-
-extern std::string g_modulePath;
 
 static void AppendPose(std::stringstream &f_stream, const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -25,17 +28,25 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 
     // A driver with a DisplayRedirect device can be instantiated by more than one
     // SteamVR process; only the first (vrserver) spawns the monitor and saves config
-    m_primaryGuard = CreateMutexA(NULL, FALSE, "Local\\driver_asvr_primary");
-    m_primaryInstance = (m_primaryGuard != NULL) && (GetLastError() != ERROR_ALREADY_EXISTS);
+    m_primaryInstance = Platform::AcquirePrimaryGuard();
 
     m_settings = LoadDriverSettings();
 
     m_hmd.reset(new CVirtualHmd(m_settings.resolution, m_settings.fps));
     m_hmd->SetPoseTransform(m_settings.position, m_settings.rotation);
+
+#ifdef _WIN32
     vr::VRServerDriverHost()->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
 
     m_displayRedirect.reset(new CDisplayRedirect(m_settings.fps));
     vr::VRServerDriverHost()->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
+#else
+    // The direct-mode component must be reachable through the HMD's GetComponent
+    // before Activate, so it is wired up ahead of TrackedDeviceAdded
+    m_directModeOutput.reset(new CDirectModeOutput(m_settings.resolution.x, m_settings.resolution.y, m_settings.fps));
+    m_hmd->SetDirectModeOutput(m_directModeOutput.get());
+    vr::VRServerDriverHost()->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
+#endif
 
     m_controllerRight.reset(new CControllerDevice(false));
     vr::VRServerDriverHost()->TrackedDeviceAdded(m_controllerRight->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerRight.get());
@@ -54,29 +65,13 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
     return vr::VRInitError_None;
 }
 
-// asvr_monitor.exe ships next to the driver DLL; it watches for the
+// The monitor binary ships next to the driver module; it watches for the
 // VREvent_Quit and exits on its own when SteamVR shuts down
 void CServerDriver::LaunchMonitor() const
 {
-    const size_t l_dirEnd = g_modulePath.rfind('\\');
-    if(l_dirEnd == std::string::npos) return;
-    const std::string l_directory = g_modulePath.substr(0U, l_dirEnd);
-    const std::string l_monitorExe = l_directory + "\\asvr_monitor.exe";
-
-    STARTUPINFOA l_startup = {};
-    l_startup.cb = sizeof(l_startup);
-    PROCESS_INFORMATION l_process = {};
-    if(CreateProcessA(l_monitorExe.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, l_directory.c_str(), &l_startup, &l_process))
-    {
-        CloseHandle(l_process.hThread);
-        CloseHandle(l_process.hProcess);
-    }
-    else
-    {
-        char l_line[128];
-        snprintf(l_line, sizeof(l_line), "CServerDriver: failed to launch asvr_monitor.exe, error=%lu", GetLastError());
-        vr::VRDriverLog()->Log(l_line);
-    }
+    const std::string l_directory = Platform::GetModuleDirectory();
+    if(l_directory.empty()) return;
+    Platform::LaunchMonitor(l_directory);
 }
 
 void CServerDriver::Cleanup()
@@ -96,15 +91,17 @@ void CServerDriver::Cleanup()
 
     m_controllerRight.reset();
     m_controllerLeft.reset();
+#ifdef _WIN32
     m_displayRedirect.reset();
+#endif
     m_hmd.reset();
+#ifndef _WIN32
+    // After the HMD that hands out the component pointer
+    m_directModeOutput.reset();
+#endif
 
-    if(m_primaryGuard)
-    {
-        CloseHandle(m_primaryGuard);
-        m_primaryGuard = NULL;
-        m_primaryInstance = false;
-    }
+    Platform::ReleasePrimaryGuard();
+    m_primaryInstance = false;
 
     VR_CLEANUP_SERVER_DRIVER_CONTEXT();
 }

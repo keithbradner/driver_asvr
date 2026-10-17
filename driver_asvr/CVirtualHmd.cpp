@@ -1,6 +1,9 @@
 #include "stdafx.h"
 
 #include "CVirtualHmd.h"
+#ifndef _WIN32
+#include "linux/CDirectModeOutput.h"
+#endif
 
 // DriverPose_t has no usable default state; start disconnected, at the origin,
 // with identity transforms on every quaternion field
@@ -33,6 +36,13 @@ const std::string& CVirtualHmd::GetSerial() const
 {
     return m_serial;
 }
+
+#ifndef _WIN32
+void CVirtualHmd::SetDirectModeOutput(CDirectModeOutput *f_output)
+{
+    m_directModeOutput = f_output;
+}
+#endif
 
 void CVirtualHmd::SetPoseTransform(const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -114,6 +124,9 @@ void* CVirtualHmd::GetComponent(const char *pchComponentNameAndVersion)
     void *l_result = nullptr;
     // vrserver never asks for ITrackedDeviceServerDriver here; it has that pointer from TrackedDeviceAdded
     if(strcmp(pchComponentNameAndVersion, vr::IVRDisplayComponent_Version) == 0) l_result = static_cast<vr::IVRDisplayComponent*>(this);
+#ifndef _WIN32
+    if(m_directModeOutput && (strcmp(pchComponentNameAndVersion, vr::IVRDriverDirectModeComponent_Version) == 0)) l_result = static_cast<vr::IVRDriverDirectModeComponent*>(m_directModeOutput);
+#endif
 
     vr::IVRDriverLog *l_log = vr::VRDriverLog();
     if(l_log)

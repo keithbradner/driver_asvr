@@ -4,23 +4,30 @@
 for testing and development, no hardware required. You
 get a simulated HMD and a virtual controller for each hand, driven with mouse
 and keyboard from a desktop window that shows a live view of the VR scene. It
-works on fully headless machines and over Remote Desktop - the driver implements
-SteamVR's `IVRVirtualDisplay` path, so the compositor never needs a real display
-or hardware vsync.
+works on fully headless machines and over Remote Desktop, on **Windows and
+Linux**. On Windows the driver implements SteamVR's `IVRVirtualDisplay` path;
+on Linux it implements `IVRDriverDirectModeComponent` (the same Vulkan
+direct-mode API Valve's own Steam Link driver uses), so the compositor never
+needs a real display or hardware vsync on either OS.
 
 ![ASVR desktop window showing a live view of the VR scene](screenshot.png)
 
 ## Quickstart
 
-1. Download `driver_asvr.zip` from the Releases page, or build it yourself
-   with `tools/package.ps1`. Extract the `driver_asvr` folder somewhere
-   permanent and user-writable - not Program Files.
-2. Run `Config.exe`, click **Install**.
+1. Download `driver_asvr.zip` (Windows) or `driver_asvr_linux.tar.gz` (Linux)
+   from the Releases page, or build it yourself with `tools/package.ps1` /
+   `tools/package.sh`. Extract the `driver_asvr` folder somewhere permanent
+   and user-writable - not Program Files.
+2. Run `Config.exe` (`./Config` on Linux), click **Install**.
 3. Start SteamVR. An "ASVR" window appears; click inside it, look around
    with the mouse, move with WASD.
 
 Install registers the driver with SteamVR and flips some `steamvr.vrsettings` 
 flags. Uninstall from the same window puts everything back.
+
+If another HMD driver keeps claiming the headset slot (Steam Link/vrlink does
+this even without a headset streaming), tick **forcedDriver** in `Config` -
+SteamVR will then only consider ASVR until you untick it.
 
 ## Controls
 
@@ -53,10 +60,11 @@ launch; `Home` resets it while SteamVR is running, and "Reset Saved Pose" in
 
 ## Programmatic control (asvr_ctl)
 
-`asvr_ctl.exe` (ships next to the driver in `asvr\bin\win64`) drives the
-headset programmatically. It talks to the driver over a named pipe and reads 
-the shared frame texture directly, giving a full observe -> act loop: 
-screenshot, decide, move/click, screenshot again.
+`asvr_ctl.exe` (ships next to the driver in `asvr\bin\win64`, or `asvr_ctl`
+in `asvr/bin/linux64`) drives the headset programmatically. It talks to the
+driver over a named pipe (a unix socket on Linux) and reads the shared frame
+directly, giving a full observe -> act loop: screenshot, decide, move/click,
+screenshot again.
 
 ```
 asvr_ctl status                                  poses (HMD + controller offsets)
@@ -89,7 +97,9 @@ hand:
   (default 1024x768)
 * `fps` - virtual display refresh rate (default 60)
 * `keyMoveForward`, `keyTrigger`, ... - the monitor key bindings, stored as
-  Windows virtual-key codes
+  Windows virtual-key codes on both platforms (the Linux monitor translates
+  them to GLFW keys at startup, so a config edited on either OS means the
+  same thing on the other)
 * `positionX/Y/Z`, `rotationX/Y/Z/W` - the saved pose, written by the driver
   on shutdown
 
@@ -102,8 +112,10 @@ at a driver that's gone.
 ## Building
 
 Everything is vendored in-tree (`openvr`, `glm`, `imgui`, `glfw`,
-`nlohmann/json`), pinned to the tested versions - deliberately not submodules,
-a clone is all you need.
+`nlohmann/json`, `stb`, `volk`, Vulkan headers), pinned to the tested
+versions - deliberately not submodules, a clone is all you need.
+
+### Windows
 
 * **Driver + monitor**: open `driver_asvr.sln` in Visual Studio 2022, or
   `msbuild driver_asvr.sln /p:Configuration=Release /p:Platform=x64`.
@@ -111,6 +123,30 @@ a clone is all you need.
   then `cmake --build build/config_tool --config Release`
 * **Release zip**: `tools/package.ps1` builds all of the above and assembles
   `dist/driver_asvr.zip`.
+
+### Linux
+
+One CMake build covers all four targets (`driver_asvr.so`, `asvr_monitor`,
+`asvr_ctl`, `Config`):
+
+    cmake -S . -B build/linux -DCMAKE_BUILD_TYPE=Release
+    cmake --build build/linux -j$(nproc)
+
+Outputs land in `bin/linux64/`. `tools/package.sh` builds and assembles
+`dist/driver_asvr_linux.tar.gz`. Build on a glibc <= 2.35 distro (Ubuntu
+22.04 is what CI uses) with `build-essential cmake xorg-dev libgl1-mesa-dev`;
+the binaries link libstdc++/libgcc statically so they run inside Steam's
+pinned runtime. On an immutable OS like SteamOS, build in a container:
+
+    distrobox create --name asvr-build --image ubuntu:22.04
+    distrobox enter asvr-build   # apt install the packages above, then cmake
+
+For a dev loop without packaging, register the repo directly once:
+create a folder with `driver.vrdrivermanifest`
+(`packaging/driver.vrdrivermanifest.linux`), a `bin/linux64` symlink to the
+repo's `bin/linux64` and a `resources` symlink to `resources/`, then
+`.../SteamVR/bin/vrpathreg.sh adddriver <that folder>`. Restart SteamVR after
+each rebuild.
 
 ## Headless / Remote Desktop notes
 
@@ -127,6 +163,28 @@ a clone is all you need.
   running.
 * When something goes wrong, driver problems land in `Steam\logs\vrserver.txt`
   and `vrcompositor.txt`, monitor problems in `%TEMP%\asvr_monitor.log`.
+
+## Linux notes
+
+* Tested on SteamOS with SteamVR 2.16 and 2.17 on Mesa/RADV.
+  SteamVR must run in a desktop session.
+* The frame path is `IVRDriverDirectModeComponent` +
+  `IVRIPCResourceManagerClient` (SteamVR >= 2.5 required): the driver imports
+  the compositor's shared Vulkan images by fd, blits both eyes side-by-side
+  and publishes the pixels in POSIX shared memory
+  (`/dev/shm/driver_asvr_frame_v2`) where the monitor and `asvr_ctl` read
+  them - consumers need no GPU access at all. If Vulkan or the resource
+  manager is unavailable the driver stays up headless: tracking and input
+  keep working, only frames are missing.
+* The control channel is an abstract unix socket
+  (`@driver_asvr_control_v1.<uid>`) - abstract because vrserver runs inside
+  the Steam Linux Runtime container, whose private `/tmp` and
+  `$XDG_RUNTIME_DIR` would hide a path-bound socket from the host.
+* Driver problems land in `~/.local/share/Steam/logs/vrserver.txt` and
+  `vrcompositor.txt`, monitor problems in
+  `~/.local/state/asvr/asvr_monitor.log`.
+* Async reprojection is disabled by Install (`enableLinuxVulkanAsync: false`);
+  it is the main source of direct-mode instability on RADV.
 
 ## License
 
