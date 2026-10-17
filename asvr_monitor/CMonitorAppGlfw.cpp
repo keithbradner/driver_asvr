@@ -13,6 +13,7 @@
 #include "GLFW/glfw3.h"
 #include "glm/gtc/constants.hpp"
 
+#include "../shared/ControllerPose.h"
 #include "../shared/KeyMap.h"
 #include "../shared/SharedFrameInfo.h"
 
@@ -32,9 +33,6 @@ static const float g_ctrlMoveSpeed = 0.5f; // meters per second, controller offs
 static const float g_keyRotateSpeed = glm::pi<float>() / 4.f; // radians per second (numpad)
 static const float g_pitchLimit = glm::radians(89.f);
 
-// Head-local controller offsets at startup and after a reset, [0] = right,
-// [1] = left. Must match the driver's CControllerDevice constructor defaults
-static const glm::vec3 g_ctrlDefaultOffset[2] = { glm::vec3(0.15f, -0.15f, -0.35f), glm::vec3(-0.15f, -0.15f, -0.35f) };
 
 static std::string LogFilePath()
 {
@@ -101,8 +99,8 @@ CMonitorAppGlfw::CMonitorAppGlfw()
     }
     for(size_t i = 0U; i < 2U; i++)
     {
-        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
-        m_ctrlOffsetRot[i] = g_zeroRotation;
+        m_ctrlOffsetPos[i] = g_ctrlDefaultPosition[i];
+        m_ctrlOffsetRot[i] = GetDefaultControllerRotation(i == 1U);
     }
 }
 
@@ -309,13 +307,13 @@ void CMonitorAppGlfw::SendControllerJoystick(float f_x, float f_y)
 // (mouse release, focus loss, or switching the active controller). Deliberately
 // leaves KB_SwitchController's edge state alone - clearing it would retrigger
 // the switch on the next frame while the key is still held.
-// Both controllers back to where they start: default offsets, no aim rotation
+// Both controllers back to where they start: default offsets, aimed at the view centre
 void CMonitorAppGlfw::ResetControllerOffsets()
 {
     for(size_t i = 0U; i < 2U; i++)
     {
-        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
-        m_ctrlOffsetRot[i] = g_zeroRotation;
+        m_ctrlOffsetPos[i] = g_ctrlDefaultPosition[i];
+        m_ctrlOffsetRot[i] = GetDefaultControllerRotation(i == 1U);
     }
     SendControllerOffset(false);
     SendControllerOffset(true);

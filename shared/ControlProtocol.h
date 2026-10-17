@@ -19,7 +19,7 @@
 //   hmd_rotate yaw pitch [roll]
 //   hmd_translate x y z [world|local]
 //   ctrl <left|right> offset x y z qx qy qz qw
-//   ctrl <left|right> aim yaw pitch
+//   ctrl <left|right> aim yaw pitch          (relative to the default aim)
 //   ctrl <left|right> button <trigger|grip|system|a|b|x|y> <press|release|click>
 //   ctrl <left|right> trigger <0..1>
 //   ctrl <left|right> joystick x y

@@ -81,7 +81,8 @@ vr::EVRInitError CVirtualHmd::Activate(uint32_t unObjectId)
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_ModelNumber_String, m_serial.c_str());
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_RenderModelName_String, m_serial.c_str());
     // Average adult IPD (~63 mm) so apps see a normal stereo separation instead
-    // of two identical eyes
+    // of two identical eyes. shared/ControllerPose.h aims the default
+    // controller lasers at the left eye's axis, half of this to the left
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserIpdMeters_Float, 0.063f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserHeadToEyeDepthMeters_Float, 0.f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_DisplayFrequency_Float, m_fps);

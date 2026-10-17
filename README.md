@@ -71,7 +71,7 @@ asvr_ctl status                                  poses (HMD + controller offsets
 asvr_ctl hmd_rotate 45 0                         look 45° right
 asvr_ctl hmd_translate 0 0 -0.5                  step forward half a meter
 asvr_ctl hmd_pose 0 0 0 0 0 0 1                  absolute pose (x y z qx qy qz qw)
-asvr_ctl ctrl right aim 0 -10                    aim the controller laser
+asvr_ctl ctrl right aim 0 -10                    aim the laser 10° below the view centre
 asvr_ctl ctrl right button trigger click         press + auto-release (~150 ms)
 asvr_ctl ctrl left joystick 0 1                  held until changed
 asvr_ctl screenshot view.png --wait-new-frame    save the HMD view (left eye)

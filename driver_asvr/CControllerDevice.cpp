@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "CControllerDevice.h"
+#include "../shared/ControllerPose.h"
 
 CControllerDevice::CControllerDevice(bool f_leftHand)
 {
@@ -41,8 +42,8 @@ CControllerDevice::CControllerDevice(bool f_leftHand)
     m_joystickY = vr::k_ulInvalidInputComponentHandle;
 
     m_serial.assign(m_leftHand ? "asvr_controller_0002" : "asvr_controller_0001");
-    m_offsetPosition = glm::vec3(m_leftHand ? -0.15f : 0.15f, -0.15f, -0.35f);
-    m_offsetRotation = glm::quat(1.f, 0.f, 0.f, 0.f);
+    m_offsetPosition = g_ctrlDefaultPosition[m_leftHand ? 1U : 0U];
+    m_offsetRotation = GetDefaultControllerRotation(m_leftHand);
 }
 
 CControllerDevice::~CControllerDevice()

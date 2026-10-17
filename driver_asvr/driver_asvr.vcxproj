@@ -107,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shared\ControlProtocol.h" />
+    <ClInclude Include="..\shared\ControllerPose.h" />
     <ClInclude Include="..\shared\SharedFrameInfo.h" />
     <ClInclude Include="CCompositorProvider.h" />
     <ClInclude Include="CControlServer.h" />

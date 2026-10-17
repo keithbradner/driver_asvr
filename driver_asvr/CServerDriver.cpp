@@ -11,6 +11,7 @@
 #include "CControlServer.h"
 #include "Platform.h"
 #include "../shared/ControlProtocol.h"
+#include "../shared/ControllerPose.h"
 
 static void AppendPose(std::stringstream &f_stream, const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -276,11 +277,14 @@ std::string CServerDriver::ExecuteControllerCommand(std::stringstream &f_args)
         float l_pitch = 0.f;
         f_args >> l_yaw >> l_pitch;
         if(f_args.fail()) return "err bad args";
+        // Relative to the default aim, so "aim 0 0" points at the view centre
+        float l_defaultYaw;
+        float l_defaultPitch;
+        GetDefaultControllerAim(l_leftHand, l_defaultYaw, l_defaultPitch);
         glm::vec3 l_offsetPos;
         glm::quat l_offsetRot;
         l_controller->GetOffset(l_offsetPos, l_offsetRot);
-        l_offsetRot = glm::angleAxis(glm::radians(-l_yaw), glm::vec3(0.f, 1.f, 0.f))
-            * glm::angleAxis(glm::radians(l_pitch), glm::vec3(1.f, 0.f, 0.f));
+        l_offsetRot = ControllerAimRotation(l_defaultYaw + l_yaw, l_defaultPitch + l_pitch);
         l_controller->SetOffset(l_offsetPos, l_offsetRot);
         return "ok";
     }

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CMonitorApp.h"
 #include "../shared/SharedFrameInfo.h"
+#include "../shared/ControllerPose.h"
 
 #include <cstdio>
 
@@ -21,9 +22,6 @@ const float g_ctrlMoveSpeed = 0.5f; // meters per second, controller offset
 const float g_keyRotateSpeed = glm::pi<float>() / 4.f; // radians per second (numpad)
 const float g_pitchLimit = glm::radians(89.f);
 
-// Head-local controller offsets at startup and after a reset, [0] = right,
-// [1] = left. Must match the driver's CControllerDevice constructor defaults
-const glm::vec3 g_ctrlDefaultOffset[2U] = { glm::vec3(0.15f, -0.15f, -0.35f), glm::vec3(-0.15f, -0.15f, -0.35f) };
 
 static void LogLine(const char *f_text)
 {
@@ -140,8 +138,8 @@ CMonitorApp::CMonitorApp()
 
     for(size_t i = 0U; i < 2U; i++)
     {
-        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
-        m_ctrlOffsetRot[i] = g_zeroRotation;
+        m_ctrlOffsetPos[i] = g_ctrlDefaultPosition[i];
+        m_ctrlOffsetRot[i] = GetDefaultControllerRotation(i == 1U);
     }
 }
 CMonitorApp::~CMonitorApp()
@@ -838,13 +836,13 @@ void CMonitorApp::SendControllerJoystick(float f_x, float f_y)
     }
 }
 
-// Both controllers back to where they start: default offsets, no aim rotation
+// Both controllers back to where they start: default offsets, aimed at the view centre
 void CMonitorApp::ResetControllerOffsets()
 {
     for(size_t i = 0U; i < 2U; i++)
     {
-        m_ctrlOffsetPos[i] = g_ctrlDefaultOffset[i];
-        m_ctrlOffsetRot[i] = g_zeroRotation;
+        m_ctrlOffsetPos[i] = g_ctrlDefaultPosition[i];
+        m_ctrlOffsetRot[i] = GetDefaultControllerRotation(i == 1U);
     }
     SendControllerOffset(false);
     SendControllerOffset(true);
