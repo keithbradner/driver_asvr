@@ -31,19 +31,12 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 
     m_settings = LoadDriverSettings();
 
+    // The devices are created here but handed to vrserver from RunFrame, see RegisterDevices
     m_hmd.reset(new CVirtualHmd(m_settings.resolution, m_settings.fps));
     m_hmd->SetPoseTransform(m_settings.position, m_settings.rotation);
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
-
     m_displayRedirect.reset(new CDisplayRedirect(m_settings.fps));
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
-
     m_controllerRight.reset(new CControllerDevice(false));
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_controllerRight->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerRight.get());
-
     m_controllerLeft.reset(new CControllerDevice(true));
-    vr::VRServerDriverHost()->TrackedDeviceAdded(m_controllerLeft->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerLeft.get());
-
     for(const std::string &l_role : m_settings.trackers)
     {
         if(!CTrackerDevice::IsKnownRole(l_role))
@@ -55,18 +48,49 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
         for(const auto &l_tracker : m_trackers) l_duplicate |= !l_tracker->GetRole().compare(l_role);
         if(l_duplicate) continue;
         m_trackers.emplace_back(new CTrackerDevice(l_role));
-        vr::VRServerDriverHost()->TrackedDeviceAdded(m_trackers.back()->GetSerial().c_str(), vr::TrackedDeviceClass_GenericTracker, m_trackers.back().get());
     }
+    m_initTime = std::chrono::steady_clock::now();
 
     if(m_primaryInstance)
     {
-        LaunchMonitor();
-
+        // Safe to serve before the devices are registered: pose commands only touch
+        // driver-side state, input commands report an inactive controller until then
         m_controlServer.reset(new CControlServer([this](const std::string &f_line) { return ExecuteControlCommand(f_line); }));
         if(!m_controlServer->Start()) vr::VRDriverLog()->Log("CServerDriver: failed to start the control pipe server");
     }
 
     return vr::VRInitError_None;
+}
+
+// vrserver activates a device as soon as it is added and, once that makes an HMD
+// active, starts DXGI/D3D initialisation for it on worker threads. Adding the
+// devices from Init() put that in the middle of vrserver's own start-up module
+// loading (its audio stack, the driver DLLs still to come), and the Steam overlay
+// injected into vrserver hooks LoadLibrary in a way that is not safe against
+// concurrent loads: vrserver crashed inside gameoverlayrenderer64 at 1 s uptime
+// with exactly that overlap (2026-10-11). RunFrame is only called once vrserver has
+// finished loading drivers, so the devices are added from there, after a short
+// settle period for start-up work that continues asynchronously (vrlink's network
+// init, for one). To SteamVR this is simply a headset that connects a moment late.
+static const uint32_t g_deviceRegistrationDelayMs = 500U;
+
+void CServerDriver::RegisterDevices()
+{
+    if((std::chrono::steady_clock::now() - m_initTime) < std::chrono::milliseconds(g_deviceRegistrationDelayMs)) return;
+    m_devicesRegistered = true;
+
+    vr::IVRServerDriverHost *l_host = vr::VRServerDriverHost();
+    l_host->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
+    l_host->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
+    l_host->TrackedDeviceAdded(m_controllerRight->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerRight.get());
+    l_host->TrackedDeviceAdded(m_controllerLeft->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerLeft.get());
+    for(const auto &l_tracker : m_trackers)
+    {
+        l_host->TrackedDeviceAdded(l_tracker->GetSerial().c_str(), vr::TrackedDeviceClass_GenericTracker, l_tracker.get());
+    }
+
+    // Same order as before: devices first, then the monitor that shows them
+    if(m_primaryInstance) LaunchMonitor();
 }
 
 // asvr_monitor.exe ships next to the driver DLL; it watches for the
@@ -147,6 +171,8 @@ void CServerDriver::LeaveStandby()
 
 void CServerDriver::RunFrame()
 {
+    if(!m_devicesRegistered) RegisterDevices();
+
     // Drain driver events; nothing is event-driven yet (no haptic components),
     // but the queue must not be left to accumulate
     vr::VREvent_t l_event;

@@ -26,6 +26,8 @@ private:
     void EnterStandby();
     void LeaveStandby();
 
+    // Hands the devices to vrserver; deferred to RunFrame, see the definition
+    void RegisterDevices();
     void LaunchMonitor() const;
 
     // Control pipe command execution; runs on the vrserver thread via
@@ -54,4 +56,6 @@ private:
 
     HANDLE m_primaryGuard = NULL;
     bool m_primaryInstance = false;
+    bool m_devicesRegistered = false;
+    std::chrono::steady_clock::time_point m_initTime;
 };

@@ -31,6 +31,8 @@ class CDisplayRedirect final : public vr::ITrackedDeviceServerDriver, public vr:
     double m_lastVsync;
     uint64_t m_vsyncCounter;
 
+    IDXGIAdapter1* PickAdapter(); // best hardware adapter (caller releases), records m_adapterLuid
+    void ResolveAdapterLuid();
     bool EnsureDevice();
     void EnsureFrameMapping();
     void AdoptDevice(ID3D11Device *f_device);

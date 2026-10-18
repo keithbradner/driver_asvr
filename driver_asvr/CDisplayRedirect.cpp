@@ -113,20 +113,16 @@ double CDisplayRedirect::GetSeconds() const
     return (static_cast<double>(l_counter.QuadPart) * m_qpcToSeconds);
 }
 
-bool CDisplayRedirect::EnsureDevice()
+// The compositor renders on the discrete GPU; shared textures only open on the
+// same adapter, so skip software/Microsoft adapters (RDP remote display) and
+// take the biggest hardware GPU. Null when DXGI has no usable adapter.
+IDXGIAdapter1* CDisplayRedirect::PickAdapter()
 {
-    if(m_device) return true;
-    if(m_deviceAttempted) return false; // don't spam device creation every frame after a failure
-    m_deviceAttempted = true;
-
-    // The compositor renders on the discrete GPU; shared textures only open on the
-    // same adapter, so skip software/Microsoft adapters (RDP remote display) and
-    // take the biggest hardware GPU.
     IDXGIFactory1 *l_factory = nullptr;
     if(FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&l_factory))))
     {
         DriverLog("CDisplayRedirect: CreateDXGIFactory1 failed");
-        return false;
+        return nullptr;
     }
 
     IDXGIAdapter1 *l_adapter = nullptr;
@@ -149,15 +145,37 @@ bool CDisplayRedirect::EnsureDevice()
     }
     l_factory->Release();
 
-    HRESULT l_result = D3D11CreateDevice(l_adapter, l_adapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
-        NULL, 0U, NULL, 0U, D3D11_SDK_VERSION, &m_device, NULL, &m_context);
     if(l_adapter)
     {
         DXGI_ADAPTER_DESC1 l_desc;
         l_adapter->GetDesc1(&l_desc);
         m_adapterLuid = (static_cast<uint64_t>(static_cast<uint32_t>(l_desc.AdapterLuid.HighPart)) << 32) | l_desc.AdapterLuid.LowPart;
-        l_adapter->Release();
     }
+    return l_adapter;
+}
+
+// vrserver's instance only publishes properties (Present goes to the compositor's
+// instance), so it needs the adapter LUID but no device: D3D11CreateDevice would
+// pull the GPU's user-mode driver into vrserver, a large module load at the very
+// moment vrserver initialises graphics for the new HMD on other threads (see
+// CServerDriver::RegisterDevices for the crash this took part in).
+void CDisplayRedirect::ResolveAdapterLuid()
+{
+    if(m_adapterLuid != 0U) return;
+    IDXGIAdapter1 *l_adapter = PickAdapter();
+    if(l_adapter) l_adapter->Release();
+}
+
+bool CDisplayRedirect::EnsureDevice()
+{
+    if(m_device) return true;
+    if(m_deviceAttempted) return false; // don't spam device creation every frame after a failure
+    m_deviceAttempted = true;
+
+    IDXGIAdapter1 *l_adapter = PickAdapter();
+    const HRESULT l_result = D3D11CreateDevice(l_adapter, l_adapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
+        NULL, 0U, NULL, 0U, D3D11_SDK_VERSION, &m_device, NULL, &m_context);
+    if(l_adapter) l_adapter->Release();
     if(FAILED(l_result))
     {
         char l_line[128];
@@ -353,7 +371,9 @@ CDisplayRedirect::OpenedBackbuffer* CDisplayRedirect::ResolveBackbuffer(uint64_t
 vr::EVRInitError CDisplayRedirect::Activate(uint32_t unObjectId)
 {
     m_trackedDevice = unObjectId;
-    EnsureDevice();
+    // Only vrserver activates us, and that instance never presents, see ResolveAdapterLuid
+    ResolveAdapterLuid();
+    EnsureFrameMapping(); // created early so the monitor finds it as soon as it starts
     m_lastVsync = GetSeconds(); // sane baseline before the first WaitForPresent
 
     vr::PropertyContainerHandle_t l_container = vr::VRProperties()->TrackedDeviceToPropertyContainer(m_trackedDevice);
