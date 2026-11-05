@@ -6,6 +6,12 @@
   "legacy_binding": "{asvr}/input/asvr_legacy_bindings.json",
   "remapping": "{asvr}/input/asvr_controller_remapping.json",
   "input_bindingui_mode": "controller_handed",
+  "input_bindingui_left": {
+    "image": "{oculus}/icons/oculus_touch_left.svg"
+  },
+  "input_bindingui_right": {
+    "image": "{oculus}/icons/oculus_touch_right.svg"
+  },
   "input_source": {
     "/input/trigger": {
       "type": "trigger",
