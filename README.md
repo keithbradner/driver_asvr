@@ -6,8 +6,7 @@ get a simulated HMD and a virtual controller for each hand, driven with mouse
 and keyboard from a desktop window that shows a live view of the VR scene. It
 works on fully headless machines and over Remote Desktop, on **Windows and
 Linux**. On Windows the driver implements SteamVR's `IVRVirtualDisplay` path;
-on Linux it implements `IVRDriverDirectModeComponent` (the same Vulkan
-direct-mode API Valve's own Steam Link driver uses), so the compositor never
+on Linux it implements `IVRDriverDirectModeComponent`, so the compositor never
 needs a real display or hardware vsync on either OS.
 
 ![ASVR desktop window showing a live view of the VR scene](screenshot.png)
