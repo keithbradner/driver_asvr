@@ -4,12 +4,20 @@
 #include <cctype>
 #include <cwctype>
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <TlHelp32.h>
+#else
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+#endif
 
 namespace CPlatform
 {
+
+#ifdef _WIN32
 
 std::filesystem::path GetExecutableDirectory()
 {
@@ -54,6 +62,46 @@ bool IsProcessRunning(const char *f_name)
     CloseHandle(l_snapshot);
     return l_result;
 }
+
+#else
+
+std::filesystem::path GetExecutableDirectory()
+{
+    char l_buffer[1024];
+    const ssize_t l_length = readlink("/proc/self/exe", l_buffer, sizeof(l_buffer) - 1U);
+    if(l_length <= 0) return std::filesystem::path();
+    l_buffer[l_length] = '\0';
+    return std::filesystem::path(l_buffer).parent_path();
+}
+
+std::filesystem::path GetOpenVRPathsFile()
+{
+    const char *l_configHome = std::getenv("XDG_CONFIG_HOME");
+    if(l_configHome && l_configHome[0]) return std::filesystem::path(l_configHome) / "openvr" / "openvrpaths.vrpath";
+    const char *l_home = std::getenv("HOME");
+    if(!l_home || !l_home[0]) return std::filesystem::path();
+    return std::filesystem::path(l_home) / ".config" / "openvr" / "openvrpaths.vrpath";
+}
+
+bool IsProcessRunning(const char *f_name)
+{
+    // /proc scan; comm is the executable's base name truncated to 15 chars
+    std::string l_target(f_name);
+    if(l_target.size() > 15U) l_target.resize(15U);
+    for(const auto &l_entry : std::filesystem::directory_iterator("/proc"))
+    {
+        const std::string l_pid = l_entry.path().filename().string();
+        if(l_pid.empty() || !std::isdigit(static_cast<unsigned char>(l_pid[0]))) continue;
+        std::ifstream l_stream(l_entry.path() / "comm");
+        if(!l_stream) continue;
+        std::string l_comm;
+        std::getline(l_stream, l_comm);
+        if(l_comm == l_target) return true;
+    }
+    return false;
+}
+
+#endif
 
 bool ReadFileUtf8(const std::filesystem::path &f_path, std::string &f_out)
 {

@@ -179,6 +179,11 @@ void CVRSettings::ApplyRecommended()
     // The virtual HMD generates no "user activity"; stock timeouts blank the view
     SetTurnOffScreensTimeout(500000);
     SetPauseCompositorOnStandby(false);
+#ifndef _WIN32
+    // Async reprojection on RADV is the main source of Linux direct-mode
+    // instability (ALVR disables it for the same reason)
+    Set("steamvr", "enableLinuxVulkanAsync", false);
+#endif
 }
 
 // "driver_asvr" section - must stay in sync with the driver's DriverSettings

@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 
@@ -7,8 +8,11 @@
 #include <mmsystem.h>
 #include <d3d11.h>
 #include <dxgi.h>
+#endif
 
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <vector>

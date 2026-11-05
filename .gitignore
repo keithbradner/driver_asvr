@@ -1,9 +1,12 @@
 # Build outputs
 /bin/win32/
 /bin/win64/
+/bin/linux64/
 /driver_asvr/bin/
 /asvr_monitor/bin/
 /build/
+# Hashed icon copies SteamVR writes into a dev-registered resources folder
+/resources/icons/*.*.png
 /dist/
 **/objs/
 *.vcxproj.user
@@ -21,9 +24,11 @@ SteamVR-*.txt
 !/vendor/openvr/lib
 /vendor/openvr/lib/*
 !/vendor/openvr/lib/win64
+!/vendor/openvr/lib/linux64
 !/vendor/openvr/bin
 /vendor/openvr/bin/*
 !/vendor/openvr/bin/win64
+!/vendor/openvr/bin/linux64
 /vendor/openvr/bin/win64/*.pdb
 !/vendor/openvr/LICENSE
 !/vendor/glm
@@ -42,3 +47,6 @@ SteamVR-*.txt
 /vendor/json/*
 !/vendor/json/single_include
 !/vendor/json/LICENSE.MIT
+!/vendor/stb
+!/vendor/volk
+!/vendor/vulkan

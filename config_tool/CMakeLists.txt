@@ -10,21 +10,26 @@ endif()
 
 set(VENDOR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../vendor)
 
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-add_subdirectory(${VENDOR_DIR}/glfw glfw)
+# glfw/imgui may already exist when embedded in the root (Linux) build
+if(NOT TARGET glfw)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+    add_subdirectory(${VENDOR_DIR}/glfw glfw)
+endif()
 
-add_library(imgui STATIC
-    ${VENDOR_DIR}/imgui/imgui.cpp
-    ${VENDOR_DIR}/imgui/imgui_draw.cpp
-    ${VENDOR_DIR}/imgui/imgui_tables.cpp
-    ${VENDOR_DIR}/imgui/imgui_widgets.cpp
-    ${VENDOR_DIR}/imgui/backends/imgui_impl_glfw.cpp
-    ${VENDOR_DIR}/imgui/backends/imgui_impl_opengl3.cpp)
-target_include_directories(imgui PUBLIC ${VENDOR_DIR}/imgui ${VENDOR_DIR}/imgui/backends)
-target_link_libraries(imgui PUBLIC glfw)
+if(NOT TARGET imgui)
+    add_library(imgui STATIC
+        ${VENDOR_DIR}/imgui/imgui.cpp
+        ${VENDOR_DIR}/imgui/imgui_draw.cpp
+        ${VENDOR_DIR}/imgui/imgui_tables.cpp
+        ${VENDOR_DIR}/imgui/imgui_widgets.cpp
+        ${VENDOR_DIR}/imgui/backends/imgui_impl_glfw.cpp
+        ${VENDOR_DIR}/imgui/backends/imgui_impl_opengl3.cpp)
+    target_include_directories(imgui PUBLIC ${VENDOR_DIR}/imgui ${VENDOR_DIR}/imgui/backends)
+    target_link_libraries(imgui PUBLIC glfw)
+endif()
 
 find_package(OpenGL REQUIRED)
 

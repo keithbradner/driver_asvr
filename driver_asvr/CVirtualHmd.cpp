@@ -1,6 +1,9 @@
 #include "stdafx.h"
 
 #include "CVirtualHmd.h"
+#ifndef _WIN32
+#include "linux/CDirectModeOutput.h"
+#endif
 
 // DriverPose_t has no usable default state; start disconnected, at the origin,
 // with identity transforms on every quaternion field
@@ -33,6 +36,13 @@ const std::string& CVirtualHmd::GetSerial() const
 {
     return m_serial;
 }
+
+#ifndef _WIN32
+void CVirtualHmd::SetDirectModeOutput(CDirectModeOutput *f_output)
+{
+    m_directModeOutput = f_output;
+}
+#endif
 
 void CVirtualHmd::SetPoseTransform(const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -71,7 +81,8 @@ vr::EVRInitError CVirtualHmd::Activate(uint32_t unObjectId)
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_ModelNumber_String, m_serial.c_str());
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_RenderModelName_String, m_serial.c_str());
     // Average adult IPD (~63 mm) so apps see a normal stereo separation instead
-    // of two identical eyes
+    // of two identical eyes. shared/ControllerPose.h aims the default
+    // controller lasers at the left eye's axis, half of this to the left
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserIpdMeters_Float, 0.063f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_UserHeadToEyeDepthMeters_Float, 0.f);
     vr::VRProperties()->SetFloatProperty(m_propertyContainer, vr::Prop_DisplayFrequency_Float, m_fps);
@@ -114,6 +125,9 @@ void* CVirtualHmd::GetComponent(const char *pchComponentNameAndVersion)
     void *l_result = nullptr;
     // vrserver never asks for ITrackedDeviceServerDriver here; it has that pointer from TrackedDeviceAdded
     if(strcmp(pchComponentNameAndVersion, vr::IVRDisplayComponent_Version) == 0) l_result = static_cast<vr::IVRDisplayComponent*>(this);
+#ifndef _WIN32
+    if(m_directModeOutput && (strcmp(pchComponentNameAndVersion, vr::IVRDriverDirectModeComponent_Version) == 0)) l_result = static_cast<vr::IVRDriverDirectModeComponent*>(m_directModeOutput);
+#endif
 
     vr::IVRDriverLog *l_log = vr::VRDriverLog();
     if(l_log)

@@ -15,16 +15,17 @@ static int RunApp()
     return 0;
 }
 
-// Debug builds are console apps (stdout logging), Release is a windowed app
-#ifdef _DEBUG
-int main(int, char**)
+// On Windows, Debug builds are console apps (stdout logging), Release is a
+// windowed app; elsewhere a plain main always works
+#if defined(_WIN32) && !defined(_DEBUG)
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
     return RunApp();
 }
 #else
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+int main(int, char**)
 {
     return RunApp();
 }

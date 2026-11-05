@@ -4,11 +4,15 @@
 #include "CVirtualHmd.h"
 #include "CControllerDevice.h"
 #include "CTrackerDevice.h"
+#ifdef _WIN32
 #include "CDisplayRedirect.h"
+#else
+#include "linux/CDirectModeOutput.h"
+#endif
 #include "CControlServer.h"
+#include "Platform.h"
 #include "../shared/ControlProtocol.h"
-
-extern std::string g_modulePath;
+#include "../shared/ControllerPose.h"
 
 static void AppendPose(std::stringstream &f_stream, const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -26,15 +30,21 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 
     // A driver with a DisplayRedirect device can be instantiated by more than one
     // SteamVR process; only the first (vrserver) spawns the monitor and saves config
-    m_primaryGuard = CreateMutexA(NULL, FALSE, "Local\\driver_asvr_primary");
-    m_primaryInstance = (m_primaryGuard != NULL) && (GetLastError() != ERROR_ALREADY_EXISTS);
+    m_primaryInstance = Platform::AcquirePrimaryGuard();
 
     m_settings = LoadDriverSettings();
 
     // The devices are created here but handed to vrserver from RunFrame, see RegisterDevices
     m_hmd.reset(new CVirtualHmd(m_settings.resolution, m_settings.fps));
     m_hmd->SetPoseTransform(m_settings.position, m_settings.rotation);
+#ifdef _WIN32
     m_displayRedirect.reset(new CDisplayRedirect(m_settings.fps));
+#else
+    // The direct-mode component must be reachable through the HMD's GetComponent
+    // before Activate, so it is wired up ahead of TrackedDeviceAdded
+    m_directModeOutput.reset(new CDirectModeOutput(m_settings.resolution.x, m_settings.resolution.y, m_settings.fps));
+    m_hmd->SetDirectModeOutput(m_directModeOutput.get());
+#endif
     m_controllerRight.reset(new CControllerDevice(false));
     m_controllerLeft.reset(new CControllerDevice(true));
     for(const std::string &l_role : m_settings.trackers)
@@ -72,6 +82,8 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 // finished loading drivers, so the devices are added from there, after a short
 // settle period for start-up work that continues asynchronously (vrlink's network
 // init, for one). To SteamVR this is simply a headset that connects a moment late.
+// The crash is Windows-specific, but the delay is harmless on Linux and keeps a
+// single registration path.
 static const uint32_t g_deviceRegistrationDelayMs = 500U;
 
 void CServerDriver::RegisterDevices()
@@ -81,7 +93,9 @@ void CServerDriver::RegisterDevices()
 
     vr::IVRServerDriverHost *l_host = vr::VRServerDriverHost();
     l_host->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
+#ifdef _WIN32
     l_host->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
+#endif
     l_host->TrackedDeviceAdded(m_controllerRight->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerRight.get());
     l_host->TrackedDeviceAdded(m_controllerLeft->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerLeft.get());
     for(const auto &l_tracker : m_trackers)
@@ -93,29 +107,13 @@ void CServerDriver::RegisterDevices()
     if(m_primaryInstance) LaunchMonitor();
 }
 
-// asvr_monitor.exe ships next to the driver DLL; it watches for the
+// The monitor binary ships next to the driver module; it watches for the
 // VREvent_Quit and exits on its own when SteamVR shuts down
 void CServerDriver::LaunchMonitor() const
 {
-    const size_t l_dirEnd = g_modulePath.rfind('\\');
-    if(l_dirEnd == std::string::npos) return;
-    const std::string l_directory = g_modulePath.substr(0U, l_dirEnd);
-    const std::string l_monitorExe = l_directory + "\\asvr_monitor.exe";
-
-    STARTUPINFOA l_startup = {};
-    l_startup.cb = sizeof(l_startup);
-    PROCESS_INFORMATION l_process = {};
-    if(CreateProcessA(l_monitorExe.c_str(), NULL, NULL, NULL, FALSE, 0, NULL, l_directory.c_str(), &l_startup, &l_process))
-    {
-        CloseHandle(l_process.hThread);
-        CloseHandle(l_process.hProcess);
-    }
-    else
-    {
-        char l_line[128];
-        snprintf(l_line, sizeof(l_line), "CServerDriver: failed to launch asvr_monitor.exe, error=%lu", GetLastError());
-        vr::VRDriverLog()->Log(l_line);
-    }
+    const std::string l_directory = Platform::GetModuleDirectory();
+    if(l_directory.empty()) return;
+    Platform::LaunchMonitor(l_directory);
 }
 
 void CServerDriver::Cleanup()
@@ -136,15 +134,17 @@ void CServerDriver::Cleanup()
     m_trackers.clear();
     m_controllerRight.reset();
     m_controllerLeft.reset();
+#ifdef _WIN32
     m_displayRedirect.reset();
+#endif
     m_hmd.reset();
+#ifndef _WIN32
+    // After the HMD that hands out the component pointer
+    m_directModeOutput.reset();
+#endif
 
-    if(m_primaryGuard)
-    {
-        CloseHandle(m_primaryGuard);
-        m_primaryGuard = NULL;
-        m_primaryInstance = false;
-    }
+    Platform::ReleasePrimaryGuard();
+    m_primaryInstance = false;
 
     VR_CLEANUP_SERVER_DRIVER_CONTEXT();
 }
@@ -377,11 +377,14 @@ std::string CServerDriver::ExecuteControllerCommand(std::stringstream &f_args)
         float l_pitch = 0.f;
         f_args >> l_yaw >> l_pitch;
         if(f_args.fail()) return "err bad args";
+        // Relative to the default aim, so "aim 0 0" points at the view centre
+        float l_defaultYaw;
+        float l_defaultPitch;
+        GetDefaultControllerAim(l_leftHand, l_defaultYaw, l_defaultPitch);
         glm::vec3 l_offsetPos;
         glm::quat l_offsetRot;
         l_controller->GetOffset(l_offsetPos, l_offsetRot);
-        l_offsetRot = glm::angleAxis(glm::radians(-l_yaw), glm::vec3(0.f, 1.f, 0.f))
-            * glm::angleAxis(glm::radians(l_pitch), glm::vec3(1.f, 0.f, 0.f));
+        l_offsetRot = ControllerAimRotation(l_defaultYaw + l_yaw, l_defaultPitch + l_pitch);
         l_controller->SetOffset(l_offsetPos, l_offsetRot);
         return "ok";
     }

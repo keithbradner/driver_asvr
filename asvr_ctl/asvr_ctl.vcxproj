@@ -80,6 +80,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="PipeClient_win.cpp" />
     <ClCompile Include="Screenshot.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -89,6 +90,7 @@
   <ItemGroup>
     <ClInclude Include="..\shared\ControlProtocol.h" />
     <ClInclude Include="..\shared\SharedFrameInfo.h" />
+    <ClInclude Include="PipeClient.h" />
     <ClInclude Include="Screenshot.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

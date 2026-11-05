@@ -9,13 +9,23 @@ and over Remote Desktop - no monitor, no real headset, no hardware vsync.
 Quickstart
 ----------
 1. Extract this whole folder somewhere permanent and user-writable
-   (e.g. Documents\driver_asvr). Not inside Program Files.
-2. Run Config.exe and click "Install".
+   (e.g. Documents\driver_asvr; any home directory location on Linux).
+   Not inside Program Files.
+2. Run Config.exe ("./Config" on Linux) and click "Install".
 3. Start SteamVR. Click inside the "ASVR" window that opens,
    look around with the mouse, move with WASD.
 
-Requirements: Windows 10/11 64-bit, Steam + SteamVR installed and run at
-least once.
+Requirements: Windows 10/11 64-bit, or 64-bit Linux with SteamVR 2.5+
+(a desktop session is needed for the monitor window). Steam + SteamVR
+installed and run at least once.
+
+If another headset driver keeps claiming the HMD slot (Steam Link does this
+even when nothing is streaming), tick "forcedDriver" in Config and restart
+SteamVR; untick it to hand the slot back.
+
+On Linux the tools live in asvr/bin/linux64 (asvr_ctl, asvr_monitor), the
+monitor log is ~/.local/state/asvr/asvr_monitor.log and driver problems are
+logged in ~/.local/share/Steam/logs/vrserver.txt.
 
 Install registers the asvr driver with SteamVR and applies the
 steamvr.vrsettings values headless operation needs (your settings file is
