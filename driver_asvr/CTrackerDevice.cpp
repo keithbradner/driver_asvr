@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "CTrackerDevice.h"
+#include "../shared/TrackerRoles.h"
 
 // Default head-relative offsets for a standing user with the eye at about 1.65 m
 // (x right, y up, z back): hips 0.75 m below the eye, feet 1.6 m below and 0.12 m apart
@@ -21,20 +22,12 @@ static glm::vec3 DefaultOffset(const std::string &f_role)
 
 const std::vector<std::pair<std::string, std::string>>& CTrackerDevice::KnownRoles()
 {
-    static const std::vector<std::pair<std::string, std::string>> s_roles
+    static const std::vector<std::pair<std::string, std::string>> s_roles = []()
     {
-        { "waist", "TrackerRole_Waist" },
-        { "chest", "TrackerRole_Chest" },
-        { "left_foot", "TrackerRole_LeftFoot" },
-        { "right_foot", "TrackerRole_RightFoot" },
-        { "left_knee", "TrackerRole_LeftKnee" },
-        { "right_knee", "TrackerRole_RightKnee" },
-        { "left_elbow", "TrackerRole_LeftElbow" },
-        { "right_elbow", "TrackerRole_RightElbow" },
-        { "left_shoulder", "TrackerRole_LeftShoulder" },
-        { "right_shoulder", "TrackerRole_RightShoulder" },
-        { "handheld", "TrackerRole_Handed" }
-    };
+        std::vector<std::pair<std::string, std::string>> l_roles;
+        for(const auto &l_def : g_trackerRoleDefs) l_roles.emplace_back(l_def.m_name, l_def.m_steamvrRole);
+        return l_roles;
+    }();
     return s_roles;
 }
 

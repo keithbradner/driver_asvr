@@ -78,9 +78,11 @@ driver rejected the command, 2 transport failure (SteamVR not running etc.).
 ## Virtual trackers
 
 The driver also creates Vive-style trackers (`TrackedDeviceClass_GenericTracker`, controller type
-`vive_tracker`), one per role in the `trackers` setting (default `waist,left_foot,right_foot`; the
-roles are waist, chest, left_foot, right_foot, left_knee, right_knee, left_elbow, right_elbow,
-left_shoulder, right_shoulder and handheld; `none` for no trackers). On first activation each one
+`vive_tracker`), one per role in the `trackers` setting. They are **off by default** (`none`); turn
+them on with the checkboxes under "Virtual Trackers" in `Config.exe` ("Waist + Feet" is the usual
+three-point set), or set the key by hand to a comma-separated list of roles: waist, chest, left_foot,
+right_foot, left_knee, right_knee, left_elbow, right_elbow, left_shoulder, right_shoulder and
+handheld. On first activation each one
 writes its SteamVR role into the `trackers` section of `steamvr.vrsettings` (`/devices/asvr/
 asvr_tracker_<role>`), the same key SteamVR's own tracker-role UI writes, so a role you reassign there
 sticks. SteamVR's OpenXR runtime then exposes them as `/user/vive_tracker_htcx/role/<role>`.
@@ -118,7 +120,8 @@ hand:
 * `fps` - virtual display refresh rate (default 60)
 * `keyMoveForward`, `keyTrigger`, ... - the monitor key bindings, stored as
   Windows virtual-key codes
-* `trackers` - the virtual trackers to create, by role (see Virtual trackers)
+* `trackers` - the virtual trackers to create, by role; `none` by default
+  (see Virtual trackers)
 * `positionX/Y/Z`, `rotationX/Y/Z/W` - the saved pose, written by the driver
   on shutdown
 

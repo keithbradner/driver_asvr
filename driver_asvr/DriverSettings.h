@@ -9,8 +9,9 @@ struct DriverSettings
     float fps = 60.f;
     glm::vec3 position = glm::vec3(0.f);
     glm::quat rotation = glm::quat(1.f, 0.f, 0.f, 0.f);
-    // Virtual trackers to create, by role ("trackers": comma-separated; "" or "none" for none)
-    std::vector<std::string> trackers = { "waist", "left_foot", "right_foot" };
+    // Virtual trackers to create, by role ("trackers": comma-separated; "" or "none" for none).
+    // Off by default: see shared/TrackerRoles.h for the names, the Config tool to turn them on
+    std::vector<std::string> trackers;
 };
 
 // Both require an initialized driver context (vrserver or vrcompositor)

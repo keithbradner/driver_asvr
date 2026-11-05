@@ -203,6 +203,9 @@ void CVRSettings::SetForcedDriver(bool f_state)
 int CVRSettings::GetDriverKey(const char *f_key, int f_default) const { return GetInt(g_driverSection, f_key, f_default); }
 void CVRSettings::SetDriverKey(const char *f_key, int f_value) { Set(g_driverSection, f_key, f_value); }
 
+std::string CVRSettings::GetDriverTrackers() const { return GetString(g_driverSection, "trackers", "none"); }
+void CVRSettings::SetDriverTrackers(const std::string &f_list) { Set(g_driverSection, "trackers", f_list); }
+
 int CVRSettings::GetDriverWidth() const { return GetInt(g_driverSection, "resolutionWidth", 1024); }
 int CVRSettings::GetDriverHeight() const { return GetInt(g_driverSection, "resolutionHeight", 768); }
 float CVRSettings::GetDriverFPS() const { return GetFloat(g_driverSection, "fps", 60.f); }

@@ -4,6 +4,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
+#include <sstream>
 
 const ImVec4 g_colorGood(0.35f, 0.85f, 0.4f, 1.f);
 const ImVec4 g_colorBad(0.95f, 0.35f, 0.35f, 1.f);
@@ -42,6 +43,39 @@ const SelectableKey g_selectableKeys[]
     { 0xDE, "Apostrophe" }, { 0xDB, "Left Bracket" }, { 0xDD, "Right Bracket" }, { 0xC0, "Backtick" }
 };
 
+// The "trackers" setting is a comma-separated list of role names, the same
+// format the driver parses (trimmed, case-insensitive, "none" for no trackers)
+static void ParseTrackerList(const std::string &f_list, bool *f_enabled)
+{
+    for(int i = 0; i < TR_Count; i++) f_enabled[i] = false;
+
+    std::stringstream l_stream(f_list);
+    std::string l_item;
+    while(std::getline(l_stream, l_item, ','))
+    {
+        const size_t l_begin = l_item.find_first_not_of(" \t");
+        if(l_begin == std::string::npos) continue;
+        l_item = l_item.substr(l_begin, l_item.find_last_not_of(" \t") - l_begin + 1U);
+        for(char &l_char : l_item) l_char = static_cast<char>(tolower(static_cast<unsigned char>(l_char)));
+        for(int i = 0; i < TR_Count; i++)
+        {
+            if(l_item == g_trackerRoleDefs[i].m_name) f_enabled[i] = true;
+        }
+    }
+}
+
+static std::string FormatTrackerList(const bool *f_enabled)
+{
+    std::string l_list;
+    for(int i = 0; i < TR_Count; i++)
+    {
+        if(!f_enabled[i]) continue;
+        if(!l_list.empty()) l_list.push_back(',');
+        l_list.append(g_trackerRoleDefs[i].m_name);
+    }
+    return l_list.empty() ? std::string("none") : l_list;
+}
+
 static const char* GetKeyName(int f_code)
 {
     for(const auto &l_key : g_selectableKeys)
@@ -69,6 +103,7 @@ CConfigApp::CConfigApp()
     m_uiResolution[1U] = 768;
     m_uiFps = 60.f;
     for(int i = 0; i < KB_Count; i++) m_uiKeyBindings[i] = g_keyBindingDefs[i].m_defaultKey;
+    for(int i = 0; i < TR_Count; i++) m_uiTrackers[i] = false;
     m_uiRestoreBackupOnUninstall = false;
     m_uiPoseResetPending = false;
 }
@@ -158,6 +193,7 @@ void CConfigApp::PullDriverSettingsToUI()
     m_uiResolution[1U] = l_settings.GetDriverHeight();
     m_uiFps = l_settings.GetDriverFPS();
     for(int i = 0; i < KB_Count; i++) m_uiKeyBindings[i] = l_settings.GetDriverKey(g_keyBindingDefs[i].m_settingsKey, g_keyBindingDefs[i].m_defaultKey);
+    ParseTrackerList(l_settings.GetDriverTrackers(), m_uiTrackers);
     m_uiPoseResetPending = false;
 }
 
@@ -170,6 +206,7 @@ void CConfigApp::PushDriverSettingsFromUI()
     l_settings.SetDriverResolution(m_uiResolution[0U], m_uiResolution[1U]);
     l_settings.SetDriverFPS(m_uiFps);
     for(int i = 0; i < KB_Count; i++) l_settings.SetDriverKey(g_keyBindingDefs[i].m_settingsKey, m_uiKeyBindings[i]);
+    l_settings.SetDriverTrackers(FormatTrackerList(m_uiTrackers));
     if(m_uiPoseResetPending) l_settings.ResetDriverPose();
 }
 
@@ -313,6 +350,12 @@ void CConfigApp::DrawDriverSettingsSection()
         ImGui::TextColored(g_colorWarn, "pose will be zeroed on Save");
     }
 
+    if(ImGui::CollapsingHeader("Virtual Trackers", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::TextDisabled("Vive-style trackers, one per checked role. All off by default.");
+        DrawTrackerRows();
+    }
+
     if(ImGui::CollapsingHeader("Monitor Key Bindings", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::TextDisabled("Mouse look and Esc release are fixed; everything else rebinds.");
@@ -373,6 +416,42 @@ void CConfigApp::DrawKeyBindingsRows()
     if(ImGui::Button("Reset Bindings to Defaults"))
     {
         for(int i = 0; i < KB_Count; i++) m_uiKeyBindings[i] = g_keyBindingDefs[i].m_defaultKey;
+    }
+}
+
+void CConfigApp::DrawTrackerRows()
+{
+    // Two checkboxes per row, same column as the key binding combos; saved
+    // together with the rest of the driver settings
+    for(int i = 0; i < TR_Count; i++)
+    {
+        if(i % 2 == 1) ImGui::SameLine(280.f);
+        ImGui::PushID(i);
+        ImGui::Checkbox(g_trackerRoleDefs[i].m_label, &m_uiTrackers[i]);
+        ImGui::PopID();
+        if(ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Trackers are created when SteamVR starts and follow the head at a\n"
+                "role-appropriate offset until asvr_ctl moves them. SteamVR reads a\n"
+                "tracker's role when the device first activates, so a newly checked\n"
+                "role takes effect at the next SteamVR start.");
+        }
+    }
+
+    if(ImGui::Button("Waist + Feet"))
+    {
+        for(int i = 0; i < TR_Count; i++) m_uiTrackers[i] = (i == TR_Waist) || (i == TR_LeftFoot) || (i == TR_RightFoot);
+    }
+    if(ImGui::IsItemHovered()) ImGui::SetTooltip("The three-point set most full-body apps expect.");
+    ImGui::SameLine();
+    if(ImGui::Button("All Trackers"))
+    {
+        for(int i = 0; i < TR_Count; i++) m_uiTrackers[i] = true;
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("No Trackers"))
+    {
+        for(int i = 0; i < TR_Count; i++) m_uiTrackers[i] = false;
     }
 }
 

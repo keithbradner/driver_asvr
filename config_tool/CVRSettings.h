@@ -58,6 +58,8 @@ public:
     void SetForcedDriver(bool f_state);
     int GetDriverKey(const char *f_key, int f_default) const; // monitor key bindings
     void SetDriverKey(const char *f_key, int f_value);
+    std::string GetDriverTrackers() const; // comma-separated role names, "none" for none
+    void SetDriverTrackers(const std::string &f_list);
     int GetDriverWidth() const;
     int GetDriverHeight() const;
     float GetDriverFPS() const;

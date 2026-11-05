@@ -19,8 +19,8 @@ static float ReadFloat(vr::IVRSettings *f_settings, const char *f_key, float f_d
     return (l_error == vr::VRSettingsError_None) ? l_value : f_default;
 }
 
-// Comma-separated role names, trimmed and lower-cased; key absent -> the default
-// list, "" or "none" -> no trackers
+// Comma-separated role names, trimmed and lower-cased; key absent, "" or
+// "none" -> no trackers
 static void ReadTrackers(vr::IVRSettings *f_settings, std::vector<std::string> &f_trackers)
 {
     char l_buffer[256] = { 0 };

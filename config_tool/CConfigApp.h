@@ -2,6 +2,7 @@
 
 #include "CConfigCore.h"
 #include "../shared/KeyBindings.h"
+#include "../shared/TrackerRoles.h"
 
 struct GLFWwindow;
 
@@ -23,6 +24,7 @@ class CConfigApp final
     int m_uiResolution[2U];
     float m_uiFps;
     int m_uiKeyBindings[KB_Count];
+    bool m_uiTrackers[TR_Count];
     bool m_uiRestoreBackupOnUninstall;
     bool m_uiPoseResetPending;
 
@@ -37,6 +39,7 @@ class CConfigApp final
     void DrawVRSettingsSection();
     void DrawDriverSettingsSection();
     void DrawKeyBindingsRows();
+    void DrawTrackerRows();
     void DrawFrame();
 public:
     CConfigApp();
