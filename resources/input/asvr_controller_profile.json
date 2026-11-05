@@ -6,6 +6,7 @@
   "legacy_binding": "{asvr}/input/asvr_legacy_bindings.json",
   "remapping": "{asvr}/input/asvr_controller_remapping.json",
   "input_bindingui_mode": "controller_handed",
+  "should_show_binding_errors": true,
   "input_bindingui_left": {
     "image": "{oculus}/icons/oculus_touch_left.svg"
   },
@@ -15,49 +16,67 @@
   "input_source": {
     "/input/trigger": {
       "type": "trigger",
+      "binding_image_point": [22, 85],
       "click": true,
       "value": true,
       "order": 1
     },
     "/input/grip": {
       "type": "button",
+      "binding_image_point": [100, 86],
       "click": true,
       "order": 2
     },
     "/input/joystick": {
       "type": "joystick",
+      "binding_image_point": [54, 31],
       "order": 3
     },
     "/input/a": {
       "type": "button",
+      "side": "right",
+      "binding_image_point": [70, 49],
       "click": true,
       "order": 4
     },
     "/input/b": {
       "type": "button",
+      "side": "right",
+      "binding_image_point": [54, 55],
       "click": true,
       "order": 5
     },
     "/input/x": {
       "type": "button",
+      "side": "left",
+      "binding_image_point": [70, 49],
       "click": true,
       "order": 6
     },
     "/input/y": {
       "type": "button",
+      "side": "left",
+      "binding_image_point": [54, 55],
       "click": true,
       "order": 7
     },
     "/input/system": {
       "type": "button",
+      "binding_image_point": [72, 39],
       "click": true,
       "order": 8
     },
     "/pose/raw": {
-      "type": "pose"
+      "type": "pose",
+      "binding_image_point": [14, 16]
     },
     "/pose/tip": {
-      "type": "pose"
+      "type": "pose",
+      "binding_image_point": [14, 16]
     }
-  }
+  },
+  "mirror_mappings": [
+    ["/user/hand/left/input/x", "/user/hand/right/input/a"],
+    ["/user/hand/left/input/y", "/user/hand/right/input/b"]
+  ]
 }
