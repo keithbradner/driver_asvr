@@ -92,7 +92,15 @@ void CServerDriver::RegisterDevices()
     m_devicesRegistered = true;
 
     vr::IVRServerDriverHost *l_host = vr::VRServerDriverHost();
-    l_host->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get());
+    // vrserver allows one HMD; with a real headset connected its driver usually
+    // claims the slot first (lighthouse has the Index registered ~20 ms before
+    // this call), and ours is silently refused. The monitor then mirrors that
+    // headset and its pose updates go nowhere, so say exactly what happened.
+    if(!l_host->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get()))
+    {
+        vr::VRDriverLog()->Log("CServerDriver: vrserver refused the virtual HMD - another headset owns the HMD slot. "
+            "Disconnect it, or set steamvr.forcedDriver to \"asvr\" (the forcedDriver checkbox in Config) and restart SteamVR.");
+    }
 #ifdef _WIN32
     l_host->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
 #endif

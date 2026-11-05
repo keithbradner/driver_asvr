@@ -32,6 +32,7 @@ private:
     bool m_activeControllerLeft; // which virtual controller the bindings drive
     bool m_mouseAimController; // toggle: mouse rotates the active controller, not the head
     bool m_captureGuard; // swallow the LMB press that captured the mouse
+    bool m_foreignHmd; // vrserver's HMD is not ours: a real headset took the slot, our poses go nowhere
     float m_lastJoystick[2U];
 
     // RDP and other injected input deliver absolute mouse positions, not deltas
@@ -95,6 +96,7 @@ private:
     void ResetControllerOffsets();
     void ReleaseHeldActions();
     void FindControllerDevice();
+    void CheckHmdOwnership();
     void LoadKeyBindings();
     void RecenterAbsoluteCursor();
     void ProcessInput(float f_delta);

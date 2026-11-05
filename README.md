@@ -24,8 +24,9 @@ needs a real display or hardware vsync on either OS.
 Install registers the driver with SteamVR and flips some `steamvr.vrsettings` 
 flags. Uninstall from the same window puts everything back.
 
-If another HMD driver keeps claiming the headset slot (Steam Link/vrlink does
-this even without a headset streaming), tick **forcedDriver** in `Config` -
+If another HMD driver keeps claiming the headset slot (a connected Index does,
+and Steam Link/vrlink does even without a headset streaming), the ASVR window
+title says so and the mouse does nothing: tick **forcedDriver** in `Config` -
 SteamVR will then only consider ASVR until you untick it.
 
 ## Controls

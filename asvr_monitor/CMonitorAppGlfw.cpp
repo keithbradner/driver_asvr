@@ -24,6 +24,7 @@ static const glm::vec3 g_axisX(1.f, 0.f, 0.f);
 static const glm::vec3 g_axisY(0.f, 1.f, 0.f);
 static const glm::vec3 g_axisZ(0.f, 0.f, -1.f);
 
+static const char* const g_hmdSerial = "asvr_hmd_0001"; // virtual headset
 static const char* const g_controllerSerial = "asvr_controller_0001"; // virtual right hand
 static const char* const g_leftControllerSerial = "asvr_controller_0002"; // virtual left hand
 
@@ -121,12 +122,13 @@ bool CMonitorAppGlfw::Init()
     }
 
     FindControllerDevice();
+    CheckHmdOwnership();
     LoadKeyBindings();
 
     // Adopt the HMD's current pose as our authoritative state
     vr::TrackedDevicePose_t l_poses[vr::k_unMaxTrackedDeviceCount];
     m_vrSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseRawAndUncalibrated, 0.f, l_poses, vr::k_unMaxTrackedDeviceCount);
-    if(l_poses[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
+    if(!m_foreignHmd && l_poses[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
     {
         const glm::mat4 l_headTransform = ToMat4(l_poses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
         m_position = l_headTransform * g_zeroPoint4;
@@ -218,6 +220,11 @@ void CMonitorAppGlfw::ReleaseMouse()
 
 void CMonitorAppGlfw::UpdateTitle()
 {
+    if(m_foreignHmd)
+    {
+        glfwSetWindowTitle(m_window, "ASVR - another headset owns the HMD slot, head control is off (tick forcedDriver in Config and restart SteamVR)");
+        return;
+    }
     std::string l_title("ASVR - ");
     l_title += (m_activeControllerLeft ? "left" : "right");
     l_title += " controller";
@@ -258,6 +265,7 @@ void CMonitorAppGlfw::SendDebugRequest(vr::TrackedDeviceIndex_t f_device, const 
 
 void CMonitorAppGlfw::SendHmdPose()
 {
+    if(m_foreignHmd) return; // index 0 is someone else's headset; its driver would get our setpose
     const glm::quat l_rotation = GetOrientation();
     const float l_pose[7] = { m_position.x, m_position.y, m_position.z, l_rotation.x, l_rotation.y, l_rotation.z, l_rotation.w };
     std::string l_message("setpose ");
@@ -379,6 +387,25 @@ void CMonitorAppGlfw::FindControllerDevice()
         if(l_propError != vr::TrackedProp_Success) continue;
         if(!strcmp(l_serial, g_controllerSerial)) m_controllerDevice = i;
         else if(!strcmp(l_serial, g_leftControllerSerial)) m_leftControllerDevice = i;
+    }
+}
+
+// vrserver keeps a single HMD, and with a real headset connected its driver
+// usually registers first, so our virtual HMD is refused (the driver logs it).
+// Index 0 is then that headset: the compositor mirror shows its view and
+// "setpose" would reach its driver, so head control is disabled and the title
+// says why instead of leaving a mouse that does nothing.
+void CMonitorAppGlfw::CheckHmdOwnership()
+{
+    char l_serial[64] = { 0 };
+    vr::ETrackedPropertyError l_propError = vr::TrackedProp_Success;
+    m_vrSystem->GetStringTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String, l_serial, sizeof(l_serial), &l_propError);
+    m_foreignHmd = ((l_propError == vr::TrackedProp_Success) && (strcmp(l_serial, g_hmdSerial) != 0));
+    if(m_foreignHmd)
+    {
+        char l_line[160];
+        snprintf(l_line, sizeof(l_line), "HMD slot is owned by '%s', not %s: head control disabled (set forcedDriver or disconnect the headset)", l_serial, g_hmdSerial);
+        LogLine(l_line);
     }
 }
 

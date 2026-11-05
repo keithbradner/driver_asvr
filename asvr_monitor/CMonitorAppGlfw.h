@@ -36,6 +36,7 @@ private:
     GLFWwindow *m_window = nullptr;
     bool m_captured = false;
     bool m_captureGuard = false; // swallow the LMB press that captured the mouse
+    bool m_foreignHmd = false; // vrserver's HMD is not ours: a real headset took the slot, our poses go nowhere
     double m_lastCursorX = 0.0;
     double m_lastCursorY = 0.0;
     float m_mouseDeltaX = 0.f;
@@ -86,6 +87,7 @@ private:
     void ResetControllerOffsets();
     void ReleaseHeldActions();
     void FindControllerDevice();
+    void CheckHmdOwnership();
     void LoadKeyBindings();
     void ProcessInput(float f_delta);
     void UpdateSharedFrame();

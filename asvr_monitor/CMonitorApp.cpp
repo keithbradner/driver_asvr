@@ -13,6 +13,7 @@ const glm::vec3 g_axisY(0.f, 1.f, 0.f);
 const glm::vec3 g_axisZ(0.f, 0.f, -1.f);
 
 const wchar_t g_windowClassName[] = L"AsvrMonitorWindow";
+const char* const g_hmdSerial = "asvr_hmd_0001"; // virtual headset
 const char* const g_controllerSerial = "asvr_controller_0001"; // virtual right hand
 const char* const g_leftControllerSerial = "asvr_controller_0002"; // virtual left hand
 
@@ -109,6 +110,7 @@ CMonitorApp::CMonitorApp()
     m_activeControllerLeft = false;
     m_mouseAimController = false;
     m_captureGuard = false;
+    m_foreignHmd = false;
     m_lastJoystick[0U] = 0.f;
     m_lastJoystick[1U] = 0.f;
     m_absMouseSeen = false;
@@ -158,12 +160,13 @@ bool CMonitorApp::Init()
         if(l_error == vr::VRInitError_None)
         {
             FindControllerDevice();
+            CheckHmdOwnership();
             LoadKeyBindings();
 
             // Adopt the HMD's current pose as our authoritative state
             vr::TrackedDevicePose_t l_poses[vr::k_unMaxTrackedDeviceCount];
             m_vrSystem->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseRawAndUncalibrated, 0.f, l_poses, vr::k_unMaxTrackedDeviceCount);
-            if(l_poses[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
+            if(!m_foreignHmd && l_poses[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
             {
                 const glm::mat4 l_headTransform = ToMat4(l_poses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
                 m_position = l_headTransform*g_zeroPoint4;
@@ -417,7 +420,8 @@ void CMonitorApp::UpdateCursorClip()
 void CMonitorApp::UpdateTitle()
 {
     const wchar_t *l_title = L"ASVR - click to capture mouse";
-    if(m_captured)
+    if(m_foreignHmd) l_title = L"ASVR - another headset owns the HMD slot, head control is off (tick forcedDriver in Config and restart SteamVR)";
+    else if(m_captured)
     {
         if(m_mouseAimController) l_title = (m_activeControllerLeft ? L"ASVR - LEFT controller, mouse aims it (Tab switches, Backspace to head, Esc releases)" : L"ASVR - RIGHT controller, mouse aims it (Tab switches, Backspace to head, Esc releases)");
         else l_title = (m_activeControllerLeft ? L"ASVR - LEFT controller, mouse looks (Tab switches, Backspace to aim, Esc releases)" : L"ASVR - RIGHT controller, mouse looks (Tab switches, Backspace to aim, Esc releases)");
@@ -743,6 +747,7 @@ void CMonitorApp::SetOrientationFromQuat(const glm::quat &f_rot)
 
 void CMonitorApp::SendHmdPose()
 {
+    if(m_foreignHmd) return; // index 0 is someone else's headset; its driver would get our setpose
     const glm::quat l_rotation = GetOrientation();
     const float l_pose[7] = { m_position.x, m_position.y, m_position.z, l_rotation.x, l_rotation.y, l_rotation.z, l_rotation.w };
 
@@ -897,6 +902,25 @@ void CMonitorApp::FindControllerDevice()
         if(l_propError != vr::TrackedProp_Success) continue;
         if(!strcmp(l_serial, g_controllerSerial)) m_controllerDevice = i;
         else if(!strcmp(l_serial, g_leftControllerSerial)) m_leftControllerDevice = i;
+    }
+}
+
+// vrserver keeps a single HMD, and with a real headset connected its driver
+// usually registers first, so our virtual HMD is refused (the driver logs it).
+// Index 0 is then that headset: the compositor mirror shows its view and
+// "setpose" would reach its driver, so head control is disabled and the title
+// says why instead of leaving a mouse that does nothing.
+void CMonitorApp::CheckHmdOwnership()
+{
+    char l_serial[64U] = { 0 };
+    vr::ETrackedPropertyError l_propError = vr::TrackedProp_Success;
+    m_vrSystem->GetStringTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::Prop_SerialNumber_String, l_serial, sizeof(l_serial), &l_propError);
+    m_foreignHmd = ((l_propError == vr::TrackedProp_Success) && (strcmp(l_serial, g_hmdSerial) != 0));
+    if(m_foreignHmd)
+    {
+        char l_line[160];
+        snprintf(l_line, sizeof(l_line), "HMD slot is owned by '%s', not %s: head control disabled (set forcedDriver or disconnect the headset)", l_serial, g_hmdSerial);
+        LogLine(l_line);
     }
 }
 
