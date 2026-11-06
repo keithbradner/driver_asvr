@@ -10,7 +10,7 @@ Linux**. On both the driver implements SteamVR's `IVRDriverDirectModeComponent`
 display or hardware vsync; the frames it composites are published in shared
 memory, where the window and `asvr_ctl` read them without touching the GPU.
 
-![ASVR desktop window showing a live view of the VR scene](screenshot.png)
+![The ASVR window: Settings panel on the left, live view of the SteamVR dashboard, key bindings along the bottom](screenshot.png)
 
 ## Quickstart
 
