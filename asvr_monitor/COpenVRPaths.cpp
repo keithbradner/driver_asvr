@@ -86,6 +86,19 @@ std::string COpenVRPaths::GetRuntimePath() const
     return l_result;
 }
 
+std::vector<std::string> COpenVRPaths::GetRuntimePaths() const
+{
+    std::vector<std::string> l_result;
+    if(m_loaded && m_json.contains("runtime") && m_json["runtime"].is_array())
+    {
+        for(const auto &l_entry : m_json["runtime"])
+        {
+            if(l_entry.is_string() && !l_entry.get<std::string>().empty()) l_result.push_back(l_entry.get<std::string>());
+        }
+    }
+    return l_result;
+}
+
 std::string COpenVRPaths::GetConfigPath() const
 {
     std::string l_result;

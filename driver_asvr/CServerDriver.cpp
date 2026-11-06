@@ -5,7 +5,7 @@
 #include "CControllerDevice.h"
 #include "CTrackerDevice.h"
 #ifdef _WIN32
-#include "CDisplayRedirect.h"
+#include "win/CDirectModeOutput.h"
 #else
 #include "linux/CDirectModeOutput.h"
 #endif
@@ -28,23 +28,16 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
 {
     VR_INIT_SERVER_DRIVER_CONTEXT(pDriverContext);
 
-    // A driver with a DisplayRedirect device can be instantiated by more than one
-    // SteamVR process; only the first (vrserver) spawns the monitor and saves config
-    m_primaryInstance = Platform::AcquirePrimaryGuard();
-
     m_settings = LoadDriverSettings();
 
     // The devices are created here but handed to vrserver from RunFrame, see RegisterDevices
     m_hmd.reset(new CVirtualHmd(m_settings.resolution, m_settings.fps));
     m_hmd->SetPoseTransform(m_settings.position, m_settings.rotation);
-#ifdef _WIN32
-    m_displayRedirect.reset(new CDisplayRedirect(m_settings.fps));
-#else
     // The direct-mode component must be reachable through the HMD's GetComponent
-    // before Activate, so it is wired up ahead of TrackedDeviceAdded
+    // before Activate, so it is wired up ahead of TrackedDeviceAdded. It owns no
+    // GPU resources until the compositor asks for textures (see EnsureResources)
     m_directModeOutput.reset(new CDirectModeOutput(m_settings.resolution.x, m_settings.resolution.y, m_settings.fps));
     m_hmd->SetDirectModeOutput(m_directModeOutput.get());
-#endif
     m_controllerRight.reset(new CControllerDevice(false));
     m_controllerLeft.reset(new CControllerDevice(true));
     for(const std::string &l_role : m_settings.trackers)
@@ -61,13 +54,10 @@ vr::EVRInitError CServerDriver::Init(vr::IVRDriverContext *pDriverContext)
     }
     m_initTime = std::chrono::steady_clock::now();
 
-    if(m_primaryInstance)
-    {
-        // Safe to serve before the devices are registered: pose commands only touch
-        // driver-side state, input commands report an inactive controller until then
-        m_controlServer.reset(new CControlServer([this](const std::string &f_line) { return ExecuteControlCommand(f_line); }));
-        if(!m_controlServer->Start()) vr::VRDriverLog()->Log("CServerDriver: failed to start the control pipe server");
-    }
+    // Safe to serve before the devices are registered: pose commands only touch
+    // driver-side state, input commands report an inactive controller until then
+    m_controlServer.reset(new CControlServer([this](const std::string &f_line) { return ExecuteControlCommand(f_line); }));
+    if(!m_controlServer->Start()) vr::VRDriverLog()->Log("CServerDriver: failed to start the control pipe server");
 
     return vr::VRInitError_None;
 }
@@ -94,16 +84,20 @@ void CServerDriver::RegisterDevices()
     vr::IVRServerDriverHost *l_host = vr::VRServerDriverHost();
     // vrserver allows one HMD; with a real headset connected its driver usually
     // claims the slot first (lighthouse has the Index registered ~20 ms before
-    // this call), and ours is silently refused. The monitor then mirrors that
-    // headset and its pose updates go nowhere, so say exactly what happened.
+    // this call), and ours is silently refused. Say exactly what happened, then
+    // stand down completely: without the virtual headset the controllers and
+    // trackers would hang off a real HMD's tracking space, the monitor would
+    // mirror that headset, and the control pipe would accept commands that go
+    // nowhere. The driver stays loaded but drives nothing (RunFrame checks).
     if(!l_host->TrackedDeviceAdded(m_hmd->GetSerial().c_str(), vr::TrackedDeviceClass_HMD, m_hmd.get()))
     {
         vr::VRDriverLog()->Log("CServerDriver: vrserver refused the virtual HMD - another headset owns the HMD slot. "
-            "Disconnect it, or set steamvr.forcedDriver to \"asvr\" (the forcedDriver checkbox in Config) and restart SteamVR.");
+            "Disconnect it, or set steamvr.forcedDriver to \"asvr\" (the forcedDriver checkbox in the monitor's settings) and restart SteamVR. "
+            "No controllers or trackers are added and the monitor is not launched.");
+        m_hmdRefused = true;
+        m_controlServer.reset();
+        return;
     }
-#ifdef _WIN32
-    l_host->TrackedDeviceAdded(m_displayRedirect->GetSerial().c_str(), vr::TrackedDeviceClass_DisplayRedirect, m_displayRedirect.get());
-#endif
     l_host->TrackedDeviceAdded(m_controllerRight->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerRight.get());
     l_host->TrackedDeviceAdded(m_controllerLeft->GetSerial().c_str(), vr::TrackedDeviceClass_Controller, m_controllerLeft.get());
     for(const auto &l_tracker : m_trackers)
@@ -112,11 +106,12 @@ void CServerDriver::RegisterDevices()
     }
 
     // Same order as before: devices first, then the monitor that shows them
-    if(m_primaryInstance) LaunchMonitor();
+    LaunchMonitor();
 }
 
-// The monitor binary ships next to the driver module; it watches for the
-// VREvent_Quit and exits on its own when SteamVR shuts down
+// The monitor binary ships with the driver (see Platform::LaunchMonitor for
+// where it is looked for); it watches for the VREvent_Quit and exits on its
+// own when SteamVR shuts down
 void CServerDriver::LaunchMonitor() const
 {
     const std::string l_directory = Platform::GetModuleDirectory();
@@ -129,10 +124,10 @@ void CServerDriver::Cleanup()
     // The pipe thread must be gone before the devices are torn down below
     m_controlServer.reset();
 
-    if(m_primaryInstance && m_hmd)
+    // A refused headset never received pose updates; saving would only write
+    // the loaded pose back
+    if(m_hmd && !m_hmdRefused)
     {
-        // Secondary instances never receive pose updates - saving from them would
-        // clobber the persisted pose with the initial one
         glm::vec3 l_hmdPos;
         glm::quat l_hmdRot;
         m_hmd->GetPoseTransform(l_hmdPos, l_hmdRot);
@@ -142,17 +137,9 @@ void CServerDriver::Cleanup()
     m_trackers.clear();
     m_controllerRight.reset();
     m_controllerLeft.reset();
-#ifdef _WIN32
-    m_displayRedirect.reset();
-#endif
     m_hmd.reset();
-#ifndef _WIN32
     // After the HMD that hands out the component pointer
     m_directModeOutput.reset();
-#endif
-
-    Platform::ReleasePrimaryGuard();
-    m_primaryInstance = false;
 
     VR_CLEANUP_SERVER_DRIVER_CONTEXT();
 }
@@ -166,7 +153,10 @@ bool CServerDriver::ShouldBlockStandbyMode()
 {
     // The virtual HMD's pose only changes on user input, so vrserver quickly considers it
     // idle and puts it in standby, which stops the compositor (red screen / frozen view).
-    return true;
+    // Newer SteamVR versions no longer ask (the proximity sensor in CVirtualHmd does the
+    // real work); either way a driver that stood down must not veto standby for the
+    // headset that owns the slot.
+    return !m_hmdRefused;
 }
 
 void CServerDriver::EnterStandby()
@@ -187,6 +177,9 @@ void CServerDriver::RunFrame()
     while(vr::VRServerDriverHost()->PollNextEvent(&l_event, sizeof(vr::VREvent_t)))
     {
     }
+
+    // Nothing of ours is registered when another headset owns the HMD slot
+    if(m_hmdRefused) return;
 
     m_hmd->RunFrame();
 

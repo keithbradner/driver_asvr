@@ -51,21 +51,13 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>../vendor/openvr/headers;../vendor/glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <!-- "." so the win/ sources find stdafx.h and the "win/..." includes resolve like the Linux "linux/..." ones -->
+      <AdditionalIncludeDirectories>.;../vendor/openvr/headers;../vendor/glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>openvr_api.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
-    <Link>
-      <AdditionalLibraryDirectories>../vendor/openvr/lib/win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='Win32'">
-    <Link>
-      <AdditionalLibraryDirectories>../vendor/openvr/lib/win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <!-- No openvr_api: a driver talks through the driver context handed to it, never through openvr_api.dll -->
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -91,11 +83,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CCompositorProvider.cpp" />
     <ClCompile Include="CControlServer.cpp" />
     <ClCompile Include="CControlServer_win.cpp" />
     <ClCompile Include="CControllerDevice.cpp" />
-    <ClCompile Include="CDisplayRedirect.cpp" />
     <ClCompile Include="CServerDriver.cpp" />
     <ClCompile Include="CTrackerDevice.cpp" />
     <ClCompile Include="CVirtualHmd.cpp" />
@@ -105,22 +95,24 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="win\CDirectModeOutput.cpp" />
+    <ClCompile Include="win\CFramePublisher.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shared\ControlProtocol.h" />
     <ClInclude Include="..\shared\ControllerPose.h" />
     <ClInclude Include="..\shared\SharedFrameInfo.h" />
     <ClInclude Include="..\shared\TrackerRoles.h" />
-    <ClInclude Include="CCompositorProvider.h" />
     <ClInclude Include="CControlServer.h" />
     <ClInclude Include="CControllerDevice.h" />
-    <ClInclude Include="CDisplayRedirect.h" />
     <ClInclude Include="CServerDriver.h" />
     <ClInclude Include="CTrackerDevice.h" />
     <ClInclude Include="CVirtualHmd.h" />
     <ClInclude Include="DriverSettings.h" />
     <ClInclude Include="Platform.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="win\CDirectModeOutput.h" />
+    <ClInclude Include="win\CFramePublisher.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

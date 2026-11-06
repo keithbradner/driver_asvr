@@ -4,14 +4,12 @@
 #include "../shared/KeyBindings.h"
 #include "../shared/TrackerRoles.h"
 
-struct GLFWwindow;
-
-class CConfigApp final
+// The hamburger panel: install/uninstall, the driver switch, the SteamVR
+// flags, and the driver_asvr settings (resolution, fps, saved pose, trackers,
+// key bindings). Edits live in the panel until Apply/Save writes them.
+class CSettingsPanel final
 {
-    CConfigCore *m_core;
-    GLFWwindow *m_window;
-    bool m_active;
-    double m_lastRefresh;
+    CConfigCore &m_core;
 
     // UI edit state, loaded from the core on init/reload
     bool m_uiActivateMultipleDrivers;
@@ -27,25 +25,27 @@ class CConfigApp final
     bool m_uiTrackers[TR_Count];
     bool m_uiRestoreBackupOnUninstall;
     bool m_uiPoseResetPending;
+    bool m_driverSettingsChanged; // the file was rewritten: reload what the window reads from it
 
     void PullVRSettingsToUI();
     void PushVRSettingsFromUI();
     void PullDriverSettingsToUI();
     void PushDriverSettingsFromUI();
 
-    void DrawStatusSection();
+    void DrawStatusSection(bool f_vrConnected);
     void DrawDriverSwitchSection();
     void DrawInstallSection();
     void DrawVRSettingsSection();
     void DrawDriverSettingsSection();
     void DrawKeyBindingsRows();
     void DrawTrackerRows();
-    void DrawFrame();
 public:
-    CConfigApp();
-    ~CConfigApp();
+    explicit CSettingsPanel(CConfigCore &f_core);
 
-    bool Init();
-    bool Update();
-    void Shutdown();
+    // Re-reads every edit field from the core (after an install from the start screen, say)
+    void SyncFromCore();
+    // Current key bindings as edited in the panel are not live; the saved ones are
+    void Draw(bool f_vrConnected);
+    // True once after Save/Reload/Install/Uninstall changed the settings file
+    bool TakeDriverSettingsChanged();
 };

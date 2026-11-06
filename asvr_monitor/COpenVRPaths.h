@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <filesystem>
 #include <nlohmann/json.hpp>
 
@@ -23,7 +24,8 @@ public:
     const std::string& GetError() const;
     const std::filesystem::path& GetFile() const;
 
-    std::string GetRuntimePath() const;
+    std::string GetRuntimePath() const; // the first (active) runtime
+    std::vector<std::string> GetRuntimePaths() const; // every SteamVR install the file knows about
     std::string GetConfigPath() const;
 
     bool IsDriverRegistered(const std::string &f_path) const;

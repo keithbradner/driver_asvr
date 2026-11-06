@@ -3,7 +3,6 @@
 /bin/win64/
 /bin/linux64/
 /driver_asvr/bin/
-/asvr_monitor/bin/
 /build/
 # Hashed icon copies SteamVR writes into a dev-registered resources folder
 /resources/icons/*.*.png

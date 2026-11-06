@@ -3,6 +3,5 @@
     "name": "asvr",
     "directory": "",
     "resourceOnly": false,
-    "hmd_presence": [ "*.*" ],
-    "redirectsDisplay": true
+    "hmd_presence": [ "*.*" ]
 }

@@ -118,22 +118,24 @@ int RunPipeSession(const std::vector<std::string> &f_lines)
 
 int RunFrameInfo()
 {
-    HANDLE l_mapping = OpenFileMappingA(FILE_MAP_READ, FALSE, g_sharedFrameMappingName);
+    HANDLE l_mapping = OpenFileMappingA(FILE_MAP_READ, FALSE, g_sharedFramePixelsName);
     if(l_mapping == NULL)
     {
-        fputs("err: frame mapping not found (is SteamVR running with the ASVR driver?)\n", stderr);
+        fputs("err: frame block not found (is SteamVR running with the ASVR driver?)\n", stderr);
         return 2;
     }
-    const SharedFrameInfo *l_info = static_cast<const SharedFrameInfo*>(MapViewOfFile(l_mapping, FILE_MAP_READ, 0U, 0U, sizeof(SharedFrameInfo)));
+    // Only the header is needed; the view keeps the block alive after the handle closes
+    const SharedFramePixelsInfo *l_info = static_cast<const SharedFramePixelsInfo*>(
+        MapViewOfFile(l_mapping, FILE_MAP_READ, 0U, 0U, sizeof(SharedFramePixelsInfo)));
+    CloseHandle(l_mapping);
     if(l_info == NULL)
     {
-        CloseHandle(l_mapping);
         fputs("err: failed to map the frame info\n", stderr);
         return 2;
     }
 
     int l_result;
-    if(l_info->magic != g_sharedFrameMagic)
+    if(l_info->magic != g_sharedFramePixelsMagic)
     {
         fputs("err: no frame published yet (compositor not presenting?)\n", stderr);
         l_result = 2;
@@ -145,7 +147,6 @@ int RunFrameInfo()
         l_result = 0;
     }
 
-    UnmapViewOfFile(const_cast<SharedFrameInfo*>(l_info));
-    CloseHandle(l_mapping);
+    UnmapViewOfFile(l_info);
     return l_result;
 }

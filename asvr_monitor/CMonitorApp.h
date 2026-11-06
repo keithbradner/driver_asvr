@@ -1,103 +1,107 @@
 #pragma once
 
-#include "../shared/KeyBindings.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+#include "openvr.h"
+#include "imgui.h"
 
-class CMonitorApp
+#include "CConfigCore.h"
+#include "CVRLink.h"
+#include "CFrameReader.h"
+#include "CBindingsView.h"
+#include "CUiState.h"
+
+struct GLFWwindow;
+struct GLFWcursor;
+class CSettingsPanel;
+class CInputController;
+
+// The ASVR window: one GLFW + ImGui + OpenGL app on both platforms. Shows the
+// virtual headset's view and drives it with mouse and keyboard while SteamVR
+// runs; offers to start SteamVR (and to install the driver) while it does not;
+// carries the driver's settings in a side panel and the key bindings in a
+// panel at the bottom.
+class CMonitorApp final
 {
 public:
-    CMonitorApp();
+    explicit CMonitorApp(bool f_launchedByDriver);
     ~CMonitorApp();
 
     bool Init();
-    bool Update();
+    bool Update(); // false: time to exit
     void Shutdown();
 
 private:
-    bool m_active;
-
-    vr::IVRSystem *m_vrSystem;
-    vr::TrackedDeviceIndex_t m_controllerDevice; // virtual right controller
-    vr::TrackedDeviceIndex_t m_leftControllerDevice; // virtual left controller
-    vr::VREvent_t m_event;
-
-    // Window
-    HWND m_window;
-    bool m_focused;
-    bool m_captured;
-    long m_mouseDeltaX;
-    long m_mouseDeltaY;
-    bool m_sizeChanged;
-    int m_keyBindings[KB_Count]; // VK codes, loaded from vrsettings at Init
-    bool m_actionHeld[KB_Count]; // edge detection for button-type actions
-    bool m_activeControllerLeft; // which virtual controller the bindings drive
-    bool m_mouseAimController; // toggle: mouse rotates the active controller, not the head
-    bool m_captureGuard; // swallow the LMB press that captured the mouse
-    bool m_foreignHmd; // vrserver's HMD is not ours: a real headset took the slot, our poses go nowhere
-    float m_lastJoystick[2U];
-
-    // RDP and other injected input deliver absolute mouse positions, not deltas
-    bool m_absMouseSeen;
-    bool m_absMouseValid;
-    long m_absMouseX;
-    long m_absMouseY;
-    std::chrono::steady_clock::time_point m_lastTick;
-
-    // D3D11
-    ID3D11Device *m_device;
-    ID3D11DeviceContext *m_context;
-    IDXGISwapChain *m_swapChain;
-    ID3D11RenderTargetView *m_renderTarget;
-    ID3D11VertexShader *m_vertexShader;
-    ID3D11PixelShader *m_pixelShader;
-    ID3D11SamplerState *m_sampler;
-    ID3D11ShaderResourceView *m_mirrorView;
-
-    // Frame shared by the driver's DisplayRedirect device (virtual display mode);
-    // preferred over the compositor mirror texture
-    HANDLE m_frameMapping;
-    void *m_frameInfoView;
-    unsigned int m_frameGeneration;
-    int m_frameMapRetry;
-    ID3D11ShaderResourceView *m_sharedFrameView;
-
-    // HMD state (authoritative, sent as absolute pose)
-    glm::vec3 m_position;
-    float m_yaw;
-    float m_pitch;
-    float m_roll;
-
-    // Virtual controller head-local offset state, [0] = right, [1] = left
-    glm::vec3 m_ctrlOffsetPos[2U];
-    glm::quat m_ctrlOffsetRot[2U];
-
-    static LRESULT CALLBACK WindowProcStatic(HWND f_window, UINT f_message, WPARAM f_wParam, LPARAM f_lParam);
-    LRESULT WindowProc(UINT f_message, WPARAM f_wParam, LPARAM f_lParam);
-
-    bool CreateMainWindow();
-    bool CreateRenderer();
-    void DestroyRenderer();
-    void UpdateSharedFrame();
-    void RenderFrame();
-
+    void TryConnect(double f_now);
+    void OnDisconnected(double f_now);
+    void ReloadBindings();
     void CaptureMouse();
     void ReleaseMouse();
-    void UpdateTitle();
-    void UpdateCursorClip();
+    static void CursorPosCallback(GLFWwindow *f_window, double f_x, double f_y);
+    void OnCursorMoved(double f_x, double f_y);
+    void RecenterCursorNearEdge(float f_delta);
+    void EdgeZone(double f_x, double f_y, int f_width, int f_height, int &f_zoneX, int &f_zoneY) const;
+    void UpdateFrameTexture();
+    void SaveUi();
+    void StartSteamVRFeedback();
 
-    glm::quat GetOrientation() const;
-    void SetOrientationFromQuat(const glm::quat &f_rot);
-    vr::TrackedDeviceIndex_t ActiveControllerIndex() const;
-    void SendHmdPose();
-    void SendControllerOffset(bool f_left);
-    void SendControllerTrigger(bool f_state);
-    void SendControllerSystem(bool f_state);
-    void SendControllerButton(const char *f_button, bool f_state);
-    void SendControllerJoystick(float f_x, float f_y);
-    void ResetControllerOffsets();
-    void ReleaseHeldActions();
-    void FindControllerDevice();
-    void CheckHmdOwnership();
-    void LoadKeyBindings();
-    void RecenterAbsoluteCursor();
-    void ProcessInput(float f_delta);
+    void DrawFrame();
+    void DrawTopBar(float f_height);
+    void DrawView();
+    void DrawStartScreen(const ImVec2 &f_areaMin, const ImVec2 &f_areaSize);
+    void DrawForeignHmdScreen(const ImVec2 &f_areaMin, const ImVec2 &f_areaSize);
+    void DrawStatusBar(float f_height);
+    void DescribeState(std::string &f_text, ImVec4 &f_color) const;
+
+    bool m_launchedByDriver;
+    bool m_active = false;
+    GLFWwindow *m_window = nullptr;
+    float m_uiScale = 1.f;
+
+    UiState m_ui;
+    CConfigCore m_core;
+    std::unique_ptr<CSettingsPanel> m_settings;
+    CBindingsView m_bindingsView;
+
+    CVRLink m_link;
+    std::unique_ptr<CInputController> m_input;
+    CFrameReader m_frames;
+    bool m_poseAdopted = false; // the driver's restored pose has been read; before that nothing is sent
+    bool m_formatWarned = false;
+    unsigned long m_connectedPid = 0UL; // the vrserver we connected to; another one means SteamVR restarted
+    vr::EVRInitError m_lastInitError = vr::VRInitError_None;
+    double m_nextConnectAttempt = 0.0;
+    double m_fastRetryUntil = 0.0; // after "Start SteamVR": poll faster for a while
+    double m_lastStatusRefresh = 0.0;
+    double m_lastTick = 0.0;
+
+    // Mouse capture (look / aim): the cursor is hidden and confined to the
+    // window, motion is the difference between real cursor positions, and the
+    // cursor is warped back to the centre only when it nears the edge - see
+    // OnCursorMoved for why GLFW's own disabled-cursor mode is not used
+    GLFWcursor *m_blankCursor = nullptr;
+    bool m_captured = false;
+    bool m_escapeWasDown = false;
+    double m_lastCursorX = 0.0;
+    double m_lastCursorY = 0.0;
+    float m_pendingDeltaX = 0.f; // motion gathered between frames
+    float m_pendingDeltaY = 0.f;
+    double m_warpX = 0.0;        // where the cursor was last warped to (the window centre)
+    double m_warpY = 0.0;
+    int m_eventsSinceWarp = 0;   // the warp's own cursor event is still to come while this is small
+    bool m_warpCatchUpPending = false; // the first real event after a warp decides relative vs injected pointer
+    // What kind of pointer this is, learnt from that decision: a relative one
+    // (local mouse, RDP) carries on from the centre after a warp, an injected
+    // one (Chrome Remote Desktop) lands back where it was
+    enum EPointerKind { PK_Unknown, PK_Relative, PK_Injected };
+    EPointerKind m_pointerKind = PK_Unknown;
+    int m_pushX = 0;                   // edge the pointer is held against (-1/0/+1): keep turning that way
+    int m_pushY = 0;
+
+    // The view texture: the driver's side-by-side frame, left eye shown
+    unsigned int m_texture = 0U;
+    uint32_t m_textureWidth = 0U;
+    uint32_t m_textureHeight = 0U;
+    uint64_t m_shownFrame = 0U;
 };

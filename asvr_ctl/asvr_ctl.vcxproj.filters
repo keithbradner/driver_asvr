@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="PipeClient_win.cpp" />
     <ClCompile Include="Screenshot.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="stdafx.cpp" />
@@ -8,6 +9,7 @@
   <ItemGroup>
     <ClInclude Include="..\shared\ControlProtocol.h" />
     <ClInclude Include="..\shared\SharedFrameInfo.h" />
+    <ClInclude Include="PipeClient.h" />
     <ClInclude Include="Screenshot.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>

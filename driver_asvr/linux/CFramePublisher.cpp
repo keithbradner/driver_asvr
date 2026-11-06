@@ -22,7 +22,11 @@ bool CFramePublisher::Create(uint32_t f_width, uint32_t f_height, uint32_t f_pix
     const uint32_t l_headerSize = (sizeof(SharedFramePixelsInfo) + 63U) & ~63U; // slot alignment
     m_mappingSize = l_headerSize + (2U * static_cast<size_t>(m_slotSize));
 
-    const int l_fd = shm_open(g_sharedFramePixelsName, O_CREAT | O_RDWR, 0644);
+    // A driver that crashed leaves its object behind; start from a fresh one so
+    // a reader can never mistake last session's frame for a live one (readers
+    // notice the inode change and remap)
+    shm_unlink(g_sharedFramePixelsName);
+    const int l_fd = shm_open(g_sharedFramePixelsName, O_CREAT | O_EXCL | O_RDWR, 0644);
     if(l_fd < 0) return false;
     if(ftruncate(l_fd, static_cast<off_t>(m_mappingSize)) != 0)
     {

@@ -1,15 +1,14 @@
 #pragma once
 
 // Windows virtual-key codes are the canonical persisted key-binding format on
-// every platform (shared/KeyBindings.h, default.vrsettings, the Config tool's
-// key list) so configs stay portable. The Linux monitor translates them to
-// GLFW at load with this table.
+// every platform (shared/KeyBindings.h, default.vrsettings, the key list in
+// the monitor's settings panel) so configs stay portable. The GLFW-based
+// monitor translates them at load with this table.
 //
-// Mouse buttons (VK 0x01/0x02/0x04) are NOT translated here - they have no GLFW
-// key equivalent; callers must route them to glfwGetMouseButton via
-// KeyMapMouseButton() first.
+// Mouse buttons (VK 0x01/0x02/0x04/0x05/0x06) are NOT translated by
+// KeyMapToGlfw - they have no GLFW key equivalent; callers must route them to
+// glfwGetMouseButton via KeyMapMouseButton() first.
 
-#ifndef _WIN32
 #include "GLFW/glfw3.h"
 
 // GLFW mouse button for a VK code, or -1 when the code is not a mouse button
@@ -20,7 +19,25 @@ inline int KeyMapMouseButton(int f_vk)
         case 0x01: return GLFW_MOUSE_BUTTON_LEFT;   // VK_LBUTTON
         case 0x02: return GLFW_MOUSE_BUTTON_RIGHT;  // VK_RBUTTON
         case 0x04: return GLFW_MOUSE_BUTTON_MIDDLE; // VK_MBUTTON
+        case 0x05: return GLFW_MOUSE_BUTTON_4;      // VK_XBUTTON1
+        case 0x06: return GLFW_MOUSE_BUTTON_5;      // VK_XBUTTON2
         default: return -1;
+    }
+}
+
+// Second physical key a VK code also stands for: the generic modifier codes
+// (VK_SHIFT/VK_CONTROL/VK_MENU meant either side under GetAsyncKeyState, the
+// API the bindings were designed around) and Return, which the numpad shares.
+// GLFW_KEY_UNKNOWN for every other code.
+inline int KeyMapToGlfwAlternate(int f_vk)
+{
+    switch(f_vk)
+    {
+        case 0x0D: return GLFW_KEY_KP_ENTER;
+        case 0x10: return GLFW_KEY_RIGHT_SHIFT;
+        case 0x11: return GLFW_KEY_RIGHT_CONTROL;
+        case 0x12: return GLFW_KEY_RIGHT_ALT;
+        default: return GLFW_KEY_UNKNOWN;
     }
 }
 
@@ -55,11 +72,16 @@ inline int KeyMapToGlfw(int f_vk)
         case 0x2C: return GLFW_KEY_PRINT_SCREEN;  // VK_SNAPSHOT
         case 0x2D: return GLFW_KEY_INSERT;
         case 0x2E: return GLFW_KEY_DELETE;
+        case 0x5B: return GLFW_KEY_LEFT_SUPER;    // VK_LWIN
+        case 0x5C: return GLFW_KEY_RIGHT_SUPER;   // VK_RWIN
+        case 0x5D: return GLFW_KEY_MENU;          // VK_APPS
         case 0x6A: return GLFW_KEY_KP_MULTIPLY;
         case 0x6B: return GLFW_KEY_KP_ADD;
         case 0x6D: return GLFW_KEY_KP_SUBTRACT;
         case 0x6E: return GLFW_KEY_KP_DECIMAL;
         case 0x6F: return GLFW_KEY_KP_DIVIDE;
+        case 0x90: return GLFW_KEY_NUM_LOCK;
+        case 0x91: return GLFW_KEY_SCROLL_LOCK;
         case 0xA0: return GLFW_KEY_LEFT_SHIFT;
         case 0xA1: return GLFW_KEY_RIGHT_SHIFT;
         case 0xA2: return GLFW_KEY_LEFT_CONTROL;
@@ -80,4 +102,3 @@ inline int KeyMapToGlfw(int f_vk)
         default: return GLFW_KEY_UNKNOWN;
     }
 }
-#endif

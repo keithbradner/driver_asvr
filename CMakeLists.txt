@@ -1,10 +1,11 @@
-# Linux build of the ASVR driver and tools; Windows builds with driver_asvr.sln
-# (plus config_tool/CMakeLists.txt standalone) - see README.md.
+# Linux build of the ASVR driver and tools. On Windows the driver and asvr_ctl
+# build with driver_asvr.sln and the monitor with asvr_monitor/CMakeLists.txt
+# standalone - see README.md.
 cmake_minimum_required(VERSION 3.21)
 project(asvr LANGUAGES C CXX)
 
 if(WIN32)
-    message(FATAL_ERROR "Use driver_asvr.sln on Windows; this CMake build is Linux-only")
+    message(FATAL_ERROR "Use driver_asvr.sln (driver + asvr_ctl) and 'cmake -S asvr_monitor' on Windows; this top-level CMake build is Linux-only")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -56,46 +57,16 @@ target_include_directories(driver_asvr PRIVATE
 target_compile_definitions(driver_asvr PRIVATE VK_NO_PROTOTYPES)
 target_link_libraries(driver_asvr PRIVATE dl pthread rt)
 
-# --- asvr_monitor ---------------------------------------------------------
-set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE) # deps/wayland XMLs are not vendored; X11 works under XWayland
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-add_subdirectory(${ASVR_VENDOR}/glfw glfw EXCLUDE_FROM_ALL)
-find_package(OpenGL REQUIRED)
-
-add_executable(asvr_monitor
-    asvr_monitor/main_linux.cpp
-    asvr_monitor/CMonitorAppGlfw.cpp
-)
-set_target_properties(asvr_monitor PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${ASVR_OUTPUT_DIR}
-    BUILD_RPATH "$ORIGIN"
-    INSTALL_RPATH "$ORIGIN"
-)
-target_include_directories(asvr_monitor PRIVATE
-    ${ASVR_VENDOR}/openvr/headers
-    ${ASVR_VENDOR}/glm
-)
-target_link_libraries(asvr_monitor PRIVATE
-    glfw
-    OpenGL::GL
-    ${ASVR_VENDOR}/openvr/lib/linux64/libopenvr_api.so
-)
-add_custom_command(TARGET asvr_monitor POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${ASVR_VENDOR}/openvr/lib/linux64/libopenvr_api.so ${ASVR_OUTPUT_DIR}/libopenvr_api.so
-)
-
-# --- config tool ----------------------------------------------------------
-add_subdirectory(config_tool)
-set_target_properties(Config PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/config_tool)
+# --- asvr_monitor (window + settings UI) ------------------------------------
+# Defines the asvr_monitor target; picks up ASVR_OUTPUT_DIR for its binary and
+# the libopenvr_api.so copy next to it
+add_subdirectory(asvr_monitor)
 
 # --- asvr_ctl -------------------------------------------------------------
 add_executable(asvr_ctl
     asvr_ctl/main.cpp
     asvr_ctl/PipeClient_posix.cpp
-    asvr_ctl/Screenshot_posix.cpp
+    asvr_ctl/Screenshot.cpp
 )
 set_target_properties(asvr_ctl PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ASVR_OUTPUT_DIR})
 target_include_directories(asvr_ctl PRIVATE ${ASVR_VENDOR}/stb)

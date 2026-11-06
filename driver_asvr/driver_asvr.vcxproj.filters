@@ -1,28 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="CCompositorProvider.cpp" />
-    <ClCompile Include="CControlServer.cpp" />
-    <ClCompile Include="CControllerDevice.cpp" />
-    <ClCompile Include="CDisplayRedirect.cpp" />
-    <ClCompile Include="CServerDriver.cpp" />
-    <ClCompile Include="CVirtualHmd.cpp" />
-    <ClCompile Include="DriverSettings.cpp" />
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="stdafx.cpp" />
+    <Filter Include="win">
+      <UniqueIdentifier>{5B0E2C7A-9D3F-4E61-8C2B-1F6A7D4E9B03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shared">
+      <UniqueIdentifier>{C4D1F8E2-6A7B-4C3D-9E0F-2B5A8D7C6E14}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\shared\ControlProtocol.h" />
-    <ClInclude Include="..\shared\ControllerPose.h" />
-    <ClInclude Include="..\shared\SharedFrameInfo.h" />
-    <ClInclude Include="..\shared\TrackerRoles.h" />
-    <ClInclude Include="CCompositorProvider.h" />
+    <ClCompile Include="CControlServer.cpp" />
+    <ClCompile Include="CControlServer_win.cpp" />
+    <ClCompile Include="CControllerDevice.cpp" />
+    <ClCompile Include="CServerDriver.cpp" />
+    <ClCompile Include="CTrackerDevice.cpp" />
+    <ClCompile Include="CVirtualHmd.cpp" />
+    <ClCompile Include="DriverSettings.cpp" />
+    <ClCompile Include="Platform.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="win\CDirectModeOutput.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+    <ClCompile Include="win\CFramePublisher.cpp">
+      <Filter>win</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\shared\ControlProtocol.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\shared\ControllerPose.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\shared\SharedFrameInfo.h">
+      <Filter>shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\shared\TrackerRoles.h">
+      <Filter>shared</Filter>
+    </ClInclude>
     <ClInclude Include="CControlServer.h" />
     <ClInclude Include="CControllerDevice.h" />
-    <ClInclude Include="CDisplayRedirect.h" />
     <ClInclude Include="CServerDriver.h" />
+    <ClInclude Include="CTrackerDevice.h" />
     <ClInclude Include="CVirtualHmd.h" />
     <ClInclude Include="DriverSettings.h" />
+    <ClInclude Include="Platform.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="win\CDirectModeOutput.h">
+      <Filter>win</Filter>
+    </ClInclude>
+    <ClInclude Include="win\CFramePublisher.h">
+      <Filter>win</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

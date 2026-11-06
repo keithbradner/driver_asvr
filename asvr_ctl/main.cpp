@@ -44,7 +44,7 @@ static const char g_usage[] =
 "\n"
 "Local commands (read the shared frame block):\n"
 "  frame                                       frame counter / resolution\n"
-"  screenshot <out.png> [--both] [--wait-new-frame] [--adapter N]\n"
+"  screenshot <out.png> [--both] [--wait-new-frame]\n"
 "                                              save the HMD view (left eye;\n"
 "                                              --both keeps both eyes)\n";
 

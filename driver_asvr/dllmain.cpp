@@ -2,7 +2,6 @@
 
 #include "CServerDriver.h"
 #ifdef _WIN32
-#include "CCompositorProvider.h"
 #define ASVR_EXPORT __declspec(dllexport)
 #else
 #include <dlfcn.h>
@@ -10,7 +9,7 @@
 #endif
 
 // Full path of this module, captured at load; CServerDriver uses it to locate
-// the monitor binary shipped next to the driver
+// the monitor binary shipped with the driver
 std::string g_modulePath;
 
 #ifdef _WIN32
@@ -27,10 +26,9 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID /* lpRes
 #endif
 
 static CServerDriver g_serverDriver;
-#ifdef _WIN32
-static CCompositorProvider g_compositorProvider;
-#endif
 
+// Only vrserver loads the driver: frames arrive through the
+// IVRDriverDirectModeComponent served from the HMD, on both platforms
 extern "C" ASVR_EXPORT void* HmdDriverFactory(const char *pInterfaceName, int *pReturnCode)
 {
 #ifndef _WIN32
@@ -45,14 +43,6 @@ extern "C" ASVR_EXPORT void* HmdDriverFactory(const char *pInterfaceName, int *p
     {
         return static_cast<vr::IServerTrackedDeviceProvider*>(&g_serverDriver);
     }
-#ifdef _WIN32
-    // Windows only: hands vrcompositor an in-process IVRVirtualDisplay. On Linux
-    // frames arrive through the IVRDriverDirectModeComponent served from vrserver.
-    if(strcmp(pInterfaceName, vr::IVRCompositorPluginProvider_Version) == 0)
-    {
-        return static_cast<vr::IVRCompositorPluginProvider*>(&g_compositorProvider);
-    }
-#endif
 
     if(pReturnCode) *pReturnCode = vr::VRInitError_Init_InterfaceNotFound;
     return nullptr;

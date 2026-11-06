@@ -5,9 +5,6 @@
 #define NOMINMAX
 
 #include <Windows.h>
-#include <d3d11.h>
-#include <dxgi.h>
-#include <wincodec.h>
 #endif
 
 #include <cstdint>

@@ -7,11 +7,7 @@
 class CVirtualHmd;
 class CControllerDevice;
 class CTrackerDevice;
-#ifdef _WIN32
-class CDisplayRedirect;
-#else
 class CDirectModeOutput;
-#endif
 class CControlServer;
 
 class CServerDriver final : public vr::IServerTrackedDeviceProvider
@@ -47,11 +43,7 @@ private:
     std::unique_ptr<CControllerDevice> m_controllerRight;
     std::unique_ptr<CControllerDevice> m_controllerLeft;
     std::vector<std::unique_ptr<CTrackerDevice>> m_trackers; // one per role in the "trackers" setting
-#ifdef _WIN32
-    std::unique_ptr<CDisplayRedirect> m_displayRedirect;
-#else
     std::unique_ptr<CDirectModeOutput> m_directModeOutput;
-#endif
     std::unique_ptr<CControlServer> m_controlServer;
 
     struct ScheduledRelease
@@ -62,7 +54,7 @@ private:
     };
     std::vector<ScheduledRelease> m_scheduledReleases;
 
-    bool m_primaryInstance = false;
     bool m_devicesRegistered = false;
+    bool m_hmdRefused = false; // another headset owns the HMD slot; see RegisterDevices
     std::chrono::steady_clock::time_point m_initTime;
 };

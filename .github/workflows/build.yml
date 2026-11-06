@@ -6,7 +6,7 @@ on:
 
 jobs:
   windows:
-    name: Windows (driver + monitor + Config + package)
+    name: Windows (driver + ctl + monitor + package)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
           if-no-files-found: error
 
   linux:
-    name: Linux (driver + monitor + ctl + Config + package)
+    name: Linux (driver + ctl + monitor + package)
     runs-on: ubuntu-latest
     # glibc 2.35 baseline, matching the documented distrobox dev environment
     container: ubuntu:22.04

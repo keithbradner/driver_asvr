@@ -1,7 +1,9 @@
 #include "stdafx.h"
 
 #include "CVirtualHmd.h"
-#ifndef _WIN32
+#ifdef _WIN32
+#include "win/CDirectModeOutput.h"
+#else
 #include "linux/CDirectModeOutput.h"
 #endif
 
@@ -37,12 +39,10 @@ const std::string& CVirtualHmd::GetSerial() const
     return m_serial;
 }
 
-#ifndef _WIN32
 void CVirtualHmd::SetDirectModeOutput(CDirectModeOutput *f_output)
 {
     m_directModeOutput = f_output;
 }
-#endif
 
 void CVirtualHmd::SetPoseTransform(const glm::vec3 &f_pos, const glm::quat &f_rot)
 {
@@ -99,6 +99,16 @@ vr::EVRInitError CVirtualHmd::Activate(uint32_t unObjectId)
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_NamedIconPathDeviceOff_String, "{asvr}/icons/headset_status_off.png");
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_NamedIconPathDeviceSearching_String, "{asvr}/icons/headset_status_searching.png");
     vr::VRProperties()->SetStringProperty(m_propertyContainer, vr::Prop_NamedIconPathDeviceStandby_String, "{asvr}/icons/headset_status_standby.png");
+#ifdef _WIN32
+    // vrcompositor creates its D3D11 device on this adapter, the one the
+    // direct-mode swap textures will live on; shared textures only open on
+    // the adapter that created them. DXGI enumeration only, no device yet
+    if(m_directModeOutput)
+    {
+        const uint64_t l_adapterLuid = m_directModeOutput->ResolveAdapterLuid();
+        if(l_adapterLuid != 0U) vr::VRProperties()->SetUint64Property(m_propertyContainer, vr::Prop_GraphicsAdapterLuid_Uint64, l_adapterLuid);
+    }
+#endif
 
     {
         std::lock_guard<std::mutex> l_lock(m_poseLock);
@@ -125,9 +135,7 @@ void* CVirtualHmd::GetComponent(const char *pchComponentNameAndVersion)
     void *l_result = nullptr;
     // vrserver never asks for ITrackedDeviceServerDriver here; it has that pointer from TrackedDeviceAdded
     if(strcmp(pchComponentNameAndVersion, vr::IVRDisplayComponent_Version) == 0) l_result = static_cast<vr::IVRDisplayComponent*>(this);
-#ifndef _WIN32
     if(m_directModeOutput && (strcmp(pchComponentNameAndVersion, vr::IVRDriverDirectModeComponent_Version) == 0)) l_result = static_cast<vr::IVRDriverDirectModeComponent*>(m_directModeOutput);
-#endif
 
     vr::IVRDriverLog *l_log = vr::VRDriverLog();
     if(l_log)
@@ -182,7 +190,7 @@ void CVirtualHmd::GetWindowBounds(int32_t *pnX, int32_t *pnY, uint32_t *pnWidth,
 bool CVirtualHmd::IsDisplayOnDesktop()
 {
     // The compositor must never open an on-desktop window; frames go through
-    // the IVRVirtualDisplay device instead (the only path that works headless)
+    // the direct-mode component instead (the only path that works headless)
     return false;
 }
 
